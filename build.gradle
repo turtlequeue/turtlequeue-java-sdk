@@ -14,7 +14,11 @@ plugins {
 repositories {
     // Use jcenter for resolving dependencies.
     // You can declare any Maven/Ivy/file repository here.
-    jcenter()
+    // jcenter()
+    mavenCentral()
+    maven { url "https://clojars.org/repo" }
+    // google()
+    // mavenLocal()
 }
 
 dependencies {
@@ -23,6 +27,7 @@ dependencies {
 
     // This dependency is used internally, and not exposed to consumers on their own compile classpath.
     implementation 'com.google.guava:guava:28.0-jre'
+    implementation 'com.turtlequeue:clj-client:0.0.5'
 
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'
