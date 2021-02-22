@@ -19,20 +19,29 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-  <!--  mvn test
-  -->
   <modelVersion>4.0.0</modelVersion>
 
+  <groupId>com.turtlequeue</groupId>
+  <artifactId>java-sdk</artifactId>
+  <version>1.0.0</version>
 
-  <name>Turtlequeue Admin Java SDK</name>
+  <name>Turtlequeue Java SDK</name>
   <description>Turtlequeue is a hosted pub-sub messaging platform.</description>
-  <url>https://github.com/turtlequeue/java-admin-sdk</url>
+  <url>https://www.turtlequeue.com</url>
 
   <organization>
     <name>Turtlequeue Limited</name>
     <url>https://turtlequeue.com</url>
   </organization>
   <inceptionYear>2019</inceptionYear>
+
+  <developers>
+    <developer>
+      <name>Nicolas Ha</name>
+      <organization>TurtleQueue Ltd</organization>
+      <organizationUrl>http://www.turtlequeue.com/</organizationUrl>
+    </developer>
+  </developers>
 
   <licenses>
     <license>
@@ -42,9 +51,12 @@
     </license>
   </licenses>
 
-  <groupId>com.turtlequeue</groupId>
-  <artifactId>java-sdk</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <scm>
+    <connection>scm:git:git@github.com:turtlequeue/java-sdk.git</connection>
+    <developerConnection>scm:git:git@github.com:turtlequeue/java-sdk.git</developerConnection>
+    <url>https://github.com/turtlequeue/java-sdk</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <properties>
     <java.version>1.8</java.version>
@@ -53,12 +65,19 @@
     <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
 
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <dependencies>
 
     <dependency>
       <groupId>com.turtlequeue</groupId>
       <artifactId>sdk.proto</artifactId>
-      <version>1.0.1-SNAPSHOT</version>
+      <version>1.0.0</version>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/junit/junit -->
@@ -68,19 +87,6 @@
       <version>4.13</version>
       <scope>test</scope>
     </dependency>
-    <!-- PROBLEM
-       - compile java-sdk
-       - compile java-admin-sdk (depends on java-sdk)
-       - run tests..
-       - need both admin and => move tests to admin??
-       - -->
-    <!--
-         <dependency>
-         <groupId>com.turtlequeue</groupId>
-         <artifactId>java-admin-sdk</artifactId>
-         <version>0.0.1-SNAPSHOT</version>
-         <scope>test</scope>
-         </dependency> -->
 
     <!-- https://mvnrepository.com/artifact/com.cognitect/transit-clj -->
     <dependency>
@@ -101,5 +107,74 @@
         <filtering>true</filtering>
       </resource>
     </resources>
+
+    <plugins>
+      <!-- All of these are for deploy -->
+      <!-- see https://central.sonatype.org/pages/apache-maven.html -->
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.7</version>
+        <extensions>true</extensions>
+        <configuration>
+          <serverId>ossrh</serverId>
+          <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+          <autoReleaseAfterClose>true</autoReleaseAfterClose>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.2.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- javadoc generation and packaging in .jar -->
+      <!-- mvn org.apache.maven.plugins:maven-javadoc-plugin:javadoc -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.2.0</version>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <doctitle>TurtleQueue API Documentation</doctitle>
+          <windowtitle>TurtleQueue API</windowtitle>
+          <bottom>
+            <![CDATA[Copyright &#169; 2019-2021,
+              <a href="https://www.turtlequeue.com">TurtleQueue</a>
+              All Rights Reserved. Use is subject to license terms.]]>
+          </bottom>
+          <doclint>none</doclint>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>1.5</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+
   </build>
 </project>
