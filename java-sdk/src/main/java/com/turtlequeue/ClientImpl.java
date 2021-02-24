@@ -306,7 +306,7 @@ public class ClientImpl implements Client {
         // apparently this is needed :/
         this.connect().get(2, TimeUnit.SECONDS);
       } catch (Exception ex) {
-        logger.log(Level.WARNING, "Failed to reconnect {0}", ex);
+        logger.log(Level.INFO, "Failed to reconnect {0}", ex);
       }
       // stop looping
       stateChangeFut.cancel(false);
@@ -558,7 +558,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
                   consumer.enqueue(c.getCommandMessage());
                 } else {
                   logger.log(Level.INFO, "Received message for consumer already closed. {requestId=" + requestId + " consumerId=" + consumerId + "}");
-                  logger.log(Level.INFO, "Consumers present are: " + clientRef.consumerRegistry);
+                  logger.log(Level.FINE, "Consumers present are: " + clientRef.consumerRegistry);
 
                   // send close to broker just in case?
                 }
@@ -607,7 +607,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
                   clientRef.pendingRequests.get(requestId).completeExceptionally(ex);
                   clientRef.pendingRequests.remove(requestId);
                 } else {
-                  logger.log(Level.INFO, "Could not find matching request for error" + requestId + ex);
+                  logger.log(Level.WARNING, "Could not find matching request for error" + requestId + ex);
                 }
               }
               break;
@@ -635,8 +635,6 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
 
           // broker is sending an error back.. get the metadata requestId
           // TODO check requestId here and handle below correctly, may not be for this request..
-
-          System.out.println("ON ERROR CALLED ");
           logger.log(Level.FINE , "onError called {0} ", t);
           Status st = Status.fromThrowable(t);
 
@@ -652,7 +650,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
             // https://github.com/grpc/grpc-java/issues/3297#issuecomment-346427628
             // however this could be caused by another error so still log it
             //
-            logger.log(Level.WARNING , "onError while shutdown - ignoring " + st);
+            logger.log(Level.FINE , "onError while shutdown - ignoring " + st);
           } else {
             // real error
             logger.log(Level.WARNING , "onError State={0} BrokerReplyStatus={1}", new Object[]{clientRef.tqClient.getState(), st});
@@ -661,7 +659,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
                && ((st.getCode() == Status.Code.UNAVAILABLE)
                    || (st.getCode() == Status.Code.CANCELLED))) {
               // the server cancelled us :/
-              logger.log(Level.WARNING , "Detected disconnection, initiating reconnect");
+              logger.log(Level.INFO , "Detected disconnection, initiating reconnect");
 
               //stateChangeFut = stateChangeWatcher.scheduleWithFixedDelay(new WatchStateCallable(clientRef), 0, 100, TimeUnit.MILLISECONDS);
               // clientRef.tqClient.reconnectChannel();
@@ -704,14 +702,14 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
       this.clientToBroker = stub.bidilink(this.brokerToClient);
 
       if(this.userToken == null) {
-        logger.log(Level.WARNING, "Missing user token");
+        logger.log(Level.SEVERE, "Missing user token");
       }
       if(this.apiKey == null) {
-        logger.log(Level.WARNING, "Missing api key");
+        logger.log(Level.SEVERE, "Missing api key");
       }
 
     } catch (StatusRuntimeException e) {
-      logger.log(Level.SEVERE, "RPC failed: {0}", e.getStatus());
+      logger.log(Level.INFO, "RPC failed: {0}", e.getStatus());
       throw e;
     }
 

@@ -351,17 +351,17 @@ public class ConsumerImpl<T> implements Consumer<T> {
     if(state != ConsumerPossibleStates.Ready) {
       // while seeking and receiveing messages: these are stragglers from the previous subscription
       // and can be discarded. Assume no need to nack as the pulsar consumer is seeking
-      logger.log(Level.WARNING, "[.enqueue] skipping consumerId={0} state={1} messages={2}", new Object[] {consumerId, state, msg});
+      logger.log(Level.FINE, "[.enqueue] skipping consumerId={0} state={1} messages={2}", new Object[] {consumerId, state, msg});
       return;
     }
 
     if(pendingReceives.isEmpty()) {
-      logger.log(Level.INFO, "[.enqueue] putting {0} in incomingMessages {1}", new Object[] {msg, incomingMessages});
+      logger.log(Level.FINE, "[.enqueue] putting {0} in incomingMessages {1}", new Object[] {msg, incomingMessages});
 
       this.incomingMessages.add(msg);
     } else {
       // there are already .receive futures waiting
-      logger.log(Level.INFO, "[.enqueue] there are already {0} .receive futures waiting", pendingReceives.size());
+      logger.log(Level.FINE, "[.enqueue] there are already {0} .receive futures waiting", pendingReceives.size());
       final CompletableFuture<Message<T>> userReceiveFuture = pollPendingReceive();
       if (userReceiveFuture == null) {
         // did not find a suitable callback
@@ -399,19 +399,19 @@ public class ConsumerImpl<T> implements Consumer<T> {
   protected void increaseAvailablePermits(int delta) {
     int available = AVAILABLE_PERMITS_UPDATER.addAndGet(this, delta);
 
-    logger.log(Level.WARNING, "{0}: +{1} permits, total= {2} messages, refill = {3}", new Object[]{this, delta, available, (available >= receiverQueueRefillThreshold)});
+    logger.log(Level.FINER, "{0}: +{1} permits, total= {2} messages, refill = {3}", new Object[]{this, delta, available, (available >= receiverQueueRefillThreshold)});
 
     if(available >= receiverQueueRefillThreshold) {
       sendFlowPermitsToBroker(available);
 
 
       IntUnaryOperator updateFn = (current) -> {
-        logger.log(Level.WARNING, "updating permits: was={0}, sentToBroker={1}, left={2}", new Object[]{current, available, (current - available)});
+        logger.log(Level.FINER, "updating permits: was={0}, sentToBroker={1}, left={2}", new Object[]{current, available, (current - available)});
         return (current - available);
       };
 
       int left = AVAILABLE_PERMITS_UPDATER.updateAndGet(this, updateFn);
-      logger.log(Level.WARNING, "Permits now left are {0} for {1}\n ", new Object[]{left, this});
+      logger.log(Level.FINER, "Permits now left are {0} for {1}\n ", new Object[]{left, this});
     }
   }
 
@@ -494,18 +494,18 @@ public class ConsumerImpl<T> implements Consumer<T> {
       msg = incomingMessages.poll(0, TimeUnit.MILLISECONDS);
       //logger.log(Level.INFO, "[.receive] did poll and got [{0}]", msg);
       if (msg == null) {
-        logger.log(Level.INFO, "[.receive] called, no messages in receiverQueue");
+        logger.log(Level.FINE, "[.receive] called, no messages in receiverQueue");
         pendingReceives.add(result);
       } else {
         // futfeat: interceptors, call beforeConsume
         // https://github.com/apache/pulsar/blob/00ce7815f4c3428215abedb0608b7acfa2c35bd5/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerInterceptors.java#L48-L78
         //
-        logger.log(Level.INFO, "[.receive] called, got message from receiverQueue {0}", msg);
+        logger.log(Level.FINE, "[.receive] called, got message from receiverQueue {0}", msg);
         result.complete(messageProcessed(msg));
         return result;
       }
     } catch (InterruptedException ex) {
-      logger.log(Level.INFO, "[.receive] Interrupt Exception");
+      logger.log(Level.FINE, "[.receive] Interrupt Exception");
 
       Thread.currentThread().interrupt();
       result.completeExceptionally(ex);

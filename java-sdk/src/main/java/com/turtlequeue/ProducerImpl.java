@@ -66,7 +66,7 @@ public class ProducerImpl<T> implements Producer {
     this.producerCreateReturnF = new CompletableFuture<ProducerImpl>();
 
     this.c.registerProducerBroker(this).thenRun(() -> {
-        logger.log(Level.INFO, "[{0}] Registering producer success", conf);
+        logger.log(Level.FINE, "[{0}] Registering producer success", conf);
 
         this.stateMachine.setState(ProducerPossibleStates.Ready);
         producerCreateReturnF.complete(this);
