@@ -150,7 +150,7 @@ public class TqClient {
 
       ConnectivityState state = channel.getState(requestConnection) ;
 
-      logger.log(Level.INFO, "Initializing TqClient requestConnection={0}, ConnectivityState={1} ", new Object[]{requestConnection,state });
+      logger.log(Level.FINE, "Initializing TqClient requestConnection={0}, ConnectivityState={1} ", new Object[]{requestConnection,state });
 
       if (requestConnection == false && state != ConnectivityState.READY) {
         throw new Exception("Trying to use the methods before the connection has been initialized, state = " + state);
@@ -164,7 +164,7 @@ public class TqClient {
   }
 
   protected ConnectivityState reconnectChannel() {
-    logger.log(Level.INFO , "Reconnecting channel " + c.getHost() + ":" + c.getPort());
+    logger.log(Level.FINE , "Reconnecting channel " + c.getHost() + ":" + c.getPort());
 
     ConnectivityState st = this.channel.getState(true);
     this.channel.resetConnectBackoff();
@@ -194,32 +194,28 @@ public class TqClient {
 
       this.channel.shutdown();
       if (!this.channel.awaitTermination(2500, TimeUnit.MILLISECONDS)) {
-         logger.log(Level.WARNING, "Timed out trying to gracefully shut down the connection: {0}. ", this.channel);
+         logger.log(Level.INFO, "Timed out trying to gracefully shut down the connection: {0}. ", this.channel);
       }
     } catch (Exception ex) {
-      logger.log(Level.WARNING, "Unexpected exception while waiting for channel termination", ex);
+      logger.log(Level.INFO, "Unexpected exception while waiting for channel termination", ex);
     }
 
     if(!this.channel.isShutdown() || !this.channel.isTerminated()) {
       try {
-        logger.log(Level.INFO, "Shutting down Client now");
+        logger.log(Level.FINE, "Shutting down Client now");
         this.channel.shutdownNow();
         if (!this.channel.awaitTermination(2500, TimeUnit.MILLISECONDS)) {
-          logger.log(Level.WARNING, "Timed out forcefully shutting down connection: {0}. ", this.channel);
+          logger.log(Level.FINE, "Timed out forcefully shutting down connection: {0}. ", this.channel);
         }
       } catch (Exception ex) {
-        logger.log(Level.SEVERE , "Unexpected exception while waiting for channel termination\n {0}", ex);
+        logger.log(Level.WARNING , "Unexpected Exception while waiting for channel termination\n {0}", ex);
       }
     } else {
       //logger.log(Level.INFO , "Client has shut down now");
     }
 
-    //
-    // FIXME: IN TESTS - THIS SHOULD NOT SHOW
-    // SEVERE: *~*~*~ Channel ManagedChannelImpl{logId=1, target=localhost:35000} was not shutdown properly!!! ~*~*~*
-    //                                                                              Make sure to call shutdown()/shutdownNow() and wait until awaitTermination() returns true.
     if(this.channel.isTerminated()) {
-      logger.log(Level.INFO, "Client has shut down");
+      logger.log(Level.FINE, "Client has shut down");
     } else {
       logger.log(Level.WARNING , "Giving up closing the client");
     }
