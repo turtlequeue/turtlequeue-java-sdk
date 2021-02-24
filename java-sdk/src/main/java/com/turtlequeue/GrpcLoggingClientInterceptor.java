@@ -63,7 +63,7 @@ public class GrpcLoggingClientInterceptor implements ClientInterceptor {
 
       @Override
       public void sendMessage(ReqT message) {
-        logger.log(Level.INFO, s, message);
+        logger.log(Level.FINE, s, message);
         super.sendMessage(message);
       }
 

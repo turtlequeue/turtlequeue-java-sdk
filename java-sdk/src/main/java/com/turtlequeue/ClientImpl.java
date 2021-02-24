@@ -347,22 +347,22 @@ public class ClientImpl implements Client {
   }
 
   protected void registerConsumer(ConsumerImpl consumer) {
-    logger.log(Level.INFO , "Registering new consumer {0}", consumer);
+    logger.log(Level.FINE , "Registering new consumer {0}", consumer);
     this.consumerRegistry.put(consumer.getConsumerId(), consumer);
   }
 
   protected void registerProducer(ProducerImpl producer) {
-    logger.log(Level.INFO , "Registering new producer {0}", producer);
+    logger.log(Level.FINE , "Registering new producer {0}", producer);
     this.producerRegistry.put(producer.getProducerId(), producer);
   }
 
   protected void removeConsumer(ConsumerImpl consumer) {
-    logger.log(Level.INFO , "Removing consumer {0}", consumer);
+    logger.log(Level.FINE , "Removing consumer {0}", consumer);
     this.consumerRegistry.remove(consumer.getConsumerId(), consumer);
   }
 
   protected void removeProducer(ProducerImpl producer) {
-    logger.log(Level.INFO , "Removing producer {0}", producer);
+    logger.log(Level.FINE , "Removing producer {0}", producer);
     this.producerRegistry.remove(producer.getProducerId(), producer);
   }
 
@@ -370,7 +370,7 @@ public class ClientImpl implements Client {
   public CompletableFuture<Void> registerConsumerBroker(ConsumerImpl consumer) {
 
     ConsumerParams conf = consumer.getConf();
-    logger.log(Level.INFO , "Registering new consumer " + consumer.getConsumerId() + " with broker " + conf);
+    logger.log(Level.FINE , "Registering new consumer " + consumer.getConsumerId() + " with broker " + conf);
 
     CommandSubscribe.Builder cmdBuilder = CommandSubscribe.newBuilder()
       .setConsumerId(consumer.getConsumerId()) // FIXME check logic + leave note here
@@ -412,7 +412,7 @@ public class ClientImpl implements Client {
 public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
 
     ProducerParams conf = producer.getConf();
-    logger.log(Level.INFO , "Registering new producer " + producer.getProducerId() + " with broker " + conf);
+    logger.log(Level.FINE, "Registering new producer " + producer.getProducerId() + " with broker " + conf);
 
     CommandProducerCreate.Builder cmdBuilder = CommandProducerCreate.newBuilder()
       .setProducerId(producer.getProducerId())
@@ -498,7 +498,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
           try {
             Long requestId = c.getRequestId();
 
-            logger.log(Level.INFO , "Broker says: " + requestId + "  " + c.getBtocOneofCase() + "\n" + c);
+            logger.log(Level.FINE, "Broker says: " + requestId + "  " + c.getBtocOneofCase() + "\n" + c);
 
             switch (c.getBtocOneofCase()) {
 
@@ -516,7 +516,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
                 UUID newUuid = UUID.fromString(c.getReplyConnect().getUuid());
 
                 if ((clientRef.connectionUid != null) && (clientRef.connectionUid != newUuid)) {
-                  logger.log(Level.INFO, "Broker replied, reconnection complete {0}", newUuid);
+                  logger.log(Level.FINE, "Broker replied, reconnection complete {0}", newUuid);
 
                   // On the other case "UNAVAILABLE", the Streams have to be
                   // re-created, and the consumers discarded + re-created
@@ -530,7 +530,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
                   clientRef.reconnectConsumers();
                 } else {
                   // first connection
-                  logger.log(Level.INFO, "Broker replied, handshake complete {0}", newUuid);
+                  logger.log(Level.FINE, "Broker replied, handshake complete {0}", newUuid);
                   clientRef.connectionUid = newUuid;
                   pingPongFut = pingLoopService.scheduleWithFixedDelay(new PingCallable(clientRef), 10, 20, TimeUnit.SECONDS);
                   connectResponse.complete(clientRef);
@@ -557,8 +557,8 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
                 if (consumer != null) {
                   consumer.enqueue(c.getCommandMessage());
                 } else {
-                  logger.log(Level.WARNING, "Received message for consumer already closed. {requestId=" + requestId + " consumerId=" + consumerId + "}");
-                  logger.log(Level.WARNING, "Consumers present are: " + clientRef.consumerRegistry);
+                  logger.log(Level.INFO, "Received message for consumer already closed. {requestId=" + requestId + " consumerId=" + consumerId + "}");
+                  logger.log(Level.INFO, "Consumers present are: " + clientRef.consumerRegistry);
 
                   // send close to broker just in case?
                 }
@@ -573,7 +573,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
                 if (consumer != null) {
                   consumer.setTopicTerminated();
                 } else {
-                  logger.log(Level.WARNING, "Received endOfTopic for consumer already closed" + requestId + "consumerId=" + consumerId);
+                  logger.log(Level.INFO, "Received endOfTopic for consumer already closed" + requestId + "consumerId=" + consumerId);
                 }
               }
               break;
@@ -601,13 +601,13 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
               {
                 TqClientException ex = TqClientException.makeTqExceptionFromReplyError(c.getReplyError());
 
-                logger.log(Level.WARNING, "Error from the broker " + requestId + ex);
+                logger.log(Level.FINE, "Error from the broker " + requestId + ex);
 
                 if(requestId != 0 ) {
                   clientRef.pendingRequests.get(requestId).completeExceptionally(ex);
                   clientRef.pendingRequests.remove(requestId);
                 } else {
-                  logger.log(Level.WARNING, "Could not find matching request for error" + requestId + ex);
+                  logger.log(Level.INFO, "Could not find matching request for error" + requestId + ex);
                 }
               }
               break;
