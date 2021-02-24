@@ -18,7 +18,8 @@ package com.turtlequeue;
 import com.turtlequeue.TopicImpl;
 
 public interface Topic {
-  static Topic builder() {
+
+  static TopicBuilderImpl builder() {
     return new TopicBuilderImpl();
   }
 
