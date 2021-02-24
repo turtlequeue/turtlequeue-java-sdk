@@ -15,7 +15,13 @@
  */
 package com.turtlequeue;
 
+import com.turtlequeue.TopicImpl;
+
 public interface Topic {
+  static Topic builder() {
+    return new TopicBuilderImpl();
+  }
+
   public String getTopic();
   public String getNamespace();
   public boolean getPersistent();
