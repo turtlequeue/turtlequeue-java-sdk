@@ -188,7 +188,7 @@ public class TqClient {
     }
 
     try {
-      logger.log(Level.INFO , "Shutting down Client");
+      logger.log(Level.FINE , "Closing Client Down");
 
       this.withCancellation.cancel(new Exception("Client is closing"));
 

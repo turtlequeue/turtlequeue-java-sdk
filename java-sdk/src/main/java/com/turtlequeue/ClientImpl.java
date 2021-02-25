@@ -652,13 +652,14 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
             //
             logger.log(Level.FINE , "onError while shutdown - ignoring " + st);
           } else {
-            // real error
-            logger.log(Level.WARNING , "onError State={0} BrokerReplyStatus={1}", new Object[]{clientRef.tqClient.getState(), st});
+            // if onError State=READY BrokerReplyStatus=Status{code=CANCELLED, description=Client is closing, cause=null}
+            // then this is fine
+            logger.log(Level.FINE , "onError State={0} BrokerReplyStatus={1}", new Object[]{clientRef.tqClient.getState(), st});
 
             if((clientRef.tqClient.getState() == ConnectivityState.IDLE)
                && ((st.getCode() == Status.Code.UNAVAILABLE)
                    || (st.getCode() == Status.Code.CANCELLED))) {
-              // the server cancelled us :/
+              // the server cancelled us and we want to stay connected
               logger.log(Level.INFO , "Detected disconnection, initiating reconnect");
 
               //stateChangeFut = stateChangeWatcher.scheduleWithFixedDelay(new WatchStateCallable(clientRef), 0, 100, TimeUnit.MILLISECONDS);
