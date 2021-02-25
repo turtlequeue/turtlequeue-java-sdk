@@ -42,16 +42,13 @@ import com.turtlequeue.MessageBuilder;
 import com.turtlequeue.StateMachine;
 import com.turtlequeue.Encoder;
 
-//
-// TODO T schema?
-//
 public class ProducerImpl<T> implements Producer {
 
   private static final Logger logger = Logger.getLogger(TurtleQueueGrpc.class.getName());
 
   ClientImpl c = null;
   ProducerParams conf = null;
-  StateMachine stateMachine = null;
+  StateMachine<ProducerPossibleStates> stateMachine = null;
   CompletableFuture<ProducerImpl> producerCreateReturnF = null;
 
   ProducerImpl(ClientImpl client, ProducerParams conf) {

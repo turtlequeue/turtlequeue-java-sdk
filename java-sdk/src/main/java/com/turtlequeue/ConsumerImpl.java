@@ -74,9 +74,6 @@ public class ConsumerImpl<T> implements Consumer<T> {
 
   private static final Logger logger = Logger.getLogger(TurtleQueueGrpc.class.getName());
 
-  private static final int MAX_REDELIVER_UNACKNOWLEDGED = 1000;
-
-
   // from builder
   ClientImpl c = null;
 
@@ -86,7 +83,6 @@ public class ConsumerImpl<T> implements Consumer<T> {
   protected Topic topic = null;
   protected String subName = null;
   protected String consumerName = null;
-  protected String schema = null; // TODO
   protected Integer priority = null;
   protected MessageId initialPosition = null;
   protected EndOfTopicMessageListener<T> endOfTopicMessageListener = null;
@@ -421,16 +417,9 @@ public class ConsumerImpl<T> implements Consumer<T> {
   }
 
   private Message<T> messageProcessed(CommandMessage msg){
-
-    // TODO decrement flow permit in here
-    // or call the above onMessageProcessed ?
-    // TODO - adopt a synchronize model a bit like Clojure?? swap! etc.
-    //
-
     // Read the data from a stream
     InputStream in = new ByteArrayInputStream(msg.getPayload().toByteArray());
-    // TODO format
-    Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, in);
+    Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, in, this.c.getCustomReadHandlers(), this.c.getCustomReadDefaultHandler());
     T data = reader.read();
 
     //logger.log(Level.INFO, "processing message: {0} \n {1} ", new Object[]{msg, data});
@@ -448,7 +437,6 @@ public class ConsumerImpl<T> implements Consumer<T> {
                                            null,
                                            msg.getIsReplicated(),
                                            msg.getReplicatedFrom(),
-                                           // TODO could pass delay in metadata
                                            null,
                                            null);
 
@@ -458,38 +446,11 @@ public class ConsumerImpl<T> implements Consumer<T> {
   }
 
   public CompletableFuture<Message<T>> receive() {
-    // like .receiveAsync
-    // https://github.com/apache/pulsar/blob/870a637b4906862a611e418341dd926e21458f08/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerImpl.java#L397-L421
-    // this is why we need pendingReceives
-    // TODO need to know if it was cancelled? NACK?
-    // TODO helpful errors like: https://github.com/apache/pulsar/blob/48156ad9a5c2e0d85813367bcaaf6ea845fffc2c/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerBase.java#L145-L157//
-
-
-    // TODO internal receiver queue like pulsar
-    // + ask for more messages after
-    // look at pulsar impl
-    //
-    //this.pendingMessageQueue.pop();
-    //this.c.requestMoreMessages(this);
-    // TODO
-    // https://github.com/apache/pulsar/blob/48156ad9a5c2e0d85813367bcaaf6ea845fffc2c/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerBase.java#L70-L72
-
-    // https://github.com/apache/pulsar/blob/870a637b4906862a611e418341dd926e21458f08/pulsar-client-tools/src/main/java/org/apache/pulsar/client/cli/CmdConsume.java#L373
-    //
-
-    // Message message = this.pendingMessageQueue.pop();
-    // if (message == null ) {
-    //   // we're waiting for a message
-    // } {
-
-    // }
-
     CompletableFuture<Message<T>> result = new CompletableFuture<Message<T>>();
 
     CommandMessage msg;
     // https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ConcurrentLinkedQueue.html?is-external=true
     // migth need a lock as pulsar does - re-evaluate when batching is added
-    //
     try {
       msg = incomingMessages.poll(0, TimeUnit.MILLISECONDS);
       //logger.log(Level.INFO, "[.receive] did poll and got [{0}]", msg);
@@ -523,8 +484,6 @@ public class ConsumerImpl<T> implements Consumer<T> {
   }
 
   public CommandMessage receive(long timeout, TimeUnit unit) throws Exception {
-    // TODO transform CommandMessage
-    // ex. wrap it in a Message
     return incomingMessages.poll(timeout, unit);
   }
 
@@ -534,7 +493,6 @@ public class ConsumerImpl<T> implements Consumer<T> {
   }
 
   public CompletableFuture<Void> acknowledge(MessageId messageId) {
-    // TODO wrap-retry in case of disconnect/reconnect?
     return this.c.consumerCommand(CommandConsumer.newBuilder()
                                   .setConsumerId(this.getConsumerId())
                                   .setCommandAck(CommandAck.newBuilder()
