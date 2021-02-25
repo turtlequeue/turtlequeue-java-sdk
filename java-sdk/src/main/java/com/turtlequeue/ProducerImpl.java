@@ -90,9 +90,18 @@ public class ProducerImpl<T> implements Producer {
   protected CompletableFuture<MessageId> send(Message<T> msg) {
 
     // Write the data to a stream
+    // https://github.com/cognitect/transit-java/blob/8fdb4d68c4ee0a9b21b38ef6009f28633d87e734/src/main/java/com/cognitect/transit/TransitFactory.java#L53
+    // Problem: need to accept the Clojure types
     ByteString.Output out = com.google.protobuf.ByteString.newOutput(); // = new ByteArrayOutputStream();
-    Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, out); // TODO pass config
-    writer.write(msg.getData());
+
+    Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, out, this.c.getCustomWriteHandlers(), this.c.getCustomDefaultWriteHandler());
+
+    try {
+      writer.write(msg.getData());
+    } catch (Exception ex) {
+      logger.log(Level.WARNING, "[{0}] Failed to encode data", msg.getData());
+      throw (ex);
+    }
 
     CommandSend.Builder b = CommandSend.newBuilder();
 

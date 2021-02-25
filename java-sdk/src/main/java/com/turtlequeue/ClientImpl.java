@@ -45,6 +45,9 @@ import io.grpc.stub.ClientCallStreamObserver;
 import com.cognitect.transit.TransitFactory;
 import com.cognitect.transit.Reader;
 import com.cognitect.transit.Writer;
+import com.cognitect.transit.WriteHandler;
+import com.cognitect.transit.ReadHandler;
+import com.cognitect.transit.DefaultReadHandler;
 
 import com.google.common.base.MoreObjects;
 import com.google.protobuf.ByteString;
@@ -162,12 +165,22 @@ public class ClientImpl implements Client {
   ConcurrentHashMap<Long, ProducerImpl> producerRegistry = new ConcurrentHashMap<Long, ProducerImpl>();
 
 
-  public ClientImpl(String host, Integer port, Boolean secure, String userToken, String apiKey) {
+  Map<String, ReadHandler<?, ?>> customReadHandlers = null;
+  Map<Class, WriteHandler<?, ?>> customWriteHandlers = null;
+  DefaultReadHandler<?> customReadDefaultHandler = null;
+  WriteHandler<?, ?> customDefaultWriteHandler = null;
+
+  public ClientImpl(String host, Integer port, Boolean secure, String userToken, String apiKey, Map<String, ReadHandler<?, ?>> customReadHandlers, Map<Class, WriteHandler<?, ?>> customWriteHandlers, DefaultReadHandler<?> customReadDefaultHandler, WriteHandler<?, ?> customDefaultWriteHandler) {
     this.host = host;
     this.port = port;
     this.secure = secure;
     this.userToken = userToken;
     this.apiKey = apiKey;
+
+    this.customReadHandlers = customReadHandlers;
+    this.customWriteHandlers = customWriteHandlers;
+    this.customReadDefaultHandler = customReadDefaultHandler;
+    this.customDefaultWriteHandler = customDefaultWriteHandler;
 
     this.pendingRequests = new ConcurrentHashMap<Long, CompletableFuture>();
 
@@ -211,6 +224,21 @@ public class ClientImpl implements Client {
     return "application/transit+json";
   }
 
+  protected Map<String, ReadHandler<?, ?>> getCustomReadHandlers() {
+    return this.customReadHandlers;
+  }
+
+  protected Map<Class, WriteHandler<?, ?>>  getCustomWriteHandlers() {
+    return this.customWriteHandlers;
+  }
+
+  protected DefaultReadHandler<?> getCustomReadDefaultHandler() {
+    return this.customReadDefaultHandler;
+  }
+
+  protected WriteHandler<?, ?> getCustomDefaultWriteHandler() {
+    return this.customDefaultWriteHandler;
+  }
 
   protected String getSdkVersion() {
     return "java:" + this.getVersionInfo().getProperty("groupId") + ":" +
