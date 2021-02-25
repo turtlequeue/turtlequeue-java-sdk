@@ -49,7 +49,7 @@ public class ProducerImpl<T> implements Producer {
   ClientImpl c = null;
   ProducerParams conf = null;
   StateMachine<ProducerPossibleStates> stateMachine = null;
-  CompletableFuture<ProducerImpl> producerCreateReturnF = null;
+  CompletableFuture<ProducerImpl<T>> producerCreateReturnF = null;
 
   ProducerImpl(ClientImpl client, ProducerParams conf) {
 
@@ -60,7 +60,7 @@ public class ProducerImpl<T> implements Producer {
 
     this.c.registerProducer(this);
 
-    this.producerCreateReturnF = new CompletableFuture<ProducerImpl>();
+    this.producerCreateReturnF = new CompletableFuture<ProducerImpl<T>>();
 
     this.c.registerProducerBroker(this).thenRun(() -> {
         logger.log(Level.FINE, "[{0}] Registering producer success", conf);
@@ -76,7 +76,7 @@ public class ProducerImpl<T> implements Producer {
 
   }
 
-  protected CompletableFuture<ProducerImpl> createReturn() {
+  protected CompletableFuture<ProducerImpl<T>> createReturn() {
     return this.producerCreateReturnF;
   }
 
@@ -91,7 +91,7 @@ public class ProducerImpl<T> implements Producer {
     // Problem: need to accept the Clojure types
     ByteString.Output out = com.google.protobuf.ByteString.newOutput(); // = new ByteArrayOutputStream();
 
-    Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, out, this.c.getCustomWriteHandlers(), this.c.getCustomDefaultWriteHandler());
+    Writer<T> writer = TransitFactory.writer(TransitFactory.Format.JSON, out, this.c.getCustomWriteHandlers(), this.c.getCustomDefaultWriteHandler());
 
     try {
       writer.write(msg.getData());
