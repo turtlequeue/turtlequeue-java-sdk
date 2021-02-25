@@ -87,6 +87,11 @@ public class ClientBuilder {
     return this;
   }
 
+  public ClientBuilder transitWriteDefaultHandler(WriteHandler<?, ?> defaultWriteHandler) {
+    this.customDefaultWriteHandler = defaultWriteHandler;
+    return this;
+  }
+
   public Client build() {
     return new ClientImpl(this.host, this.port, this.secure, this.userToken, this.apiKey,
                           this.customReadHandlers,
