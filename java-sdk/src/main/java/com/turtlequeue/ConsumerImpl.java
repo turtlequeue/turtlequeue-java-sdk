@@ -112,7 +112,7 @@ public class ConsumerImpl<T> implements Consumer<T> {
   // initialization
   // returned to the SDK user on creation
   // allows tracking success internally
-  private CompletableFuture<ConsumerImpl> subscribeReturnF = null;
+  private CompletableFuture<ConsumerImpl<T>> subscribeReturnF = null;
 
   ConsumerImpl(ClientImpl client, ConsumerParams conf) {
     // copy values only to avoid user messing around?
@@ -141,12 +141,8 @@ public class ConsumerImpl<T> implements Consumer<T> {
 
     this.c.registerConsumer(this);
 
-    this.subscribeReturnF = new CompletableFuture<ConsumerImpl>();
+    this.subscribeReturnF = new CompletableFuture<ConsumerImpl<T>>();
 
-    // wait until the broker acknowledges before returning the consumer
-    // NOTE: could do it by allowing pre-filling the internal consumer queue (?)
-    // could have (minimal)
-    // TODO use return of this
     this.c.registerConsumerBroker(this).thenRun(() -> {
         logger.log(Level.FINE, "[{0}] Registering consumer success", conf);
 
@@ -366,23 +362,16 @@ public class ConsumerImpl<T> implements Consumer<T> {
       }
       userReceiveFuture.complete(messageProcessed(msg));
     }
-
-    // TODO for batch
-    // INCOMING_MESSAGES_SIZE_UPDATER.addAndGet(this, message.getData() == null ? 0 : message.getData().length);
   }
 
-  protected CompletableFuture<ConsumerImpl> subscribeReturn() {
-    // can be returned only once the reply from the broker is OK
-    //this.subscribeReturnF = new CompletableFuture<Consumer>();
-    // returned to the SDK on creation
-    // TODO now - set the value of this.subscribeReturnF -> first subscribe
-    //success or reply error
+  protected CompletableFuture<ConsumerImpl<T>> subscribeReturn() {
     return this.subscribeReturnF;
   }
 
   /**
    * send the flow command to have the broker start pushing messages
    */
+  // TODO <BrokerToClient<ReplySuccess>>
   private CompletableFuture sendFlowPermitsToBroker(int numMessages) {
     return this.c.consumerCommand(CommandConsumer.newBuilder()
                                   .setConsumerId(this.getConsumerId())
@@ -422,7 +411,7 @@ public class ConsumerImpl<T> implements Consumer<T> {
     Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, in, this.c.getCustomReadHandlers(), this.c.getCustomReadDefaultHandler());
     T data = reader.read();
 
-    //logger.log(Level.INFO, "processing message: {0} \n {1} ", new Object[]{msg, data});
+    //logger.log(Level.FINE, "processing message: {0} \n {1} ", new Object[]{msg, data});
 
     Message<T> result = new MessageImpl<T>(this.c,
                                            this,
@@ -453,7 +442,7 @@ public class ConsumerImpl<T> implements Consumer<T> {
     // migth need a lock as pulsar does - re-evaluate when batching is added
     try {
       msg = incomingMessages.poll(0, TimeUnit.MILLISECONDS);
-      //logger.log(Level.INFO, "[.receive] did poll and got [{0}]", msg);
+      //logger.log(Level.FINER, "[.receive] did poll and got [{0}]", msg);
       if (msg == null) {
         logger.log(Level.FINE, "[.receive] called, no messages in receiverQueue");
         pendingReceives.add(result);
