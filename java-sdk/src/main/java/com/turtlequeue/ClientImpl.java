@@ -198,6 +198,8 @@ public class ClientImpl implements Client {
     this.customDefaultWriteHandler = customDefaultWriteHandler;
     this.mapBuilder = mapBuilder;
     this.listBuilder = listBuilder;
+    this.transitReader = transitReader;
+    this.transitWriter = transitWriter;
 
     this.pendingRequests = new ConcurrentHashMap<Long, CompletableFuture>();
 
