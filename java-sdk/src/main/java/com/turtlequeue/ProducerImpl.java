@@ -94,7 +94,7 @@ public class ProducerImpl<T> implements Producer {
     // TODO reuse Writer/Reader
     Writer<T> writer = null;
     if(this.c.getTransitWriter() != null) {
-      writer = this.c.getTransitWriter();
+      writer = this.c.getTransitWriter().apply(out);
     } else {
       writer = TransitFactory.writer(TransitFactory.Format.JSON, out, this.c.getCustomWriteHandlers(), this.c.getCustomDefaultWriteHandler());
     }

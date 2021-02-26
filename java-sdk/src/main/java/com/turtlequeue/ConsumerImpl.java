@@ -420,7 +420,7 @@ public class ConsumerImpl<T> implements Consumer<T> {
     Reader reader = null;
     if(this.c.getTransitReader() != null) {
       // user-supplied reader
-      reader = this.c.getTransitReader();
+      reader = this.c.getTransitReader().apply(in);
     } else {
       reader = TransitFactory.reader(TransitFactory.Format.JSON, in, this.c.getCustomReadHandlers(), this.c.getCustomReadDefaultHandler());
     }

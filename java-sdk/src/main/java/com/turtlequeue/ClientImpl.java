@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.Iterator;
 import java.util.Properties;
+import java.util.function.Function;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -98,7 +99,6 @@ import com.turtlequeue.ConsumerBuilder;
 import com.turtlequeue.SubscriptionMode;
 import com.turtlequeue.Encoder;
 
-
 //
 // https://github.com/saturnism/grpc-by-example-java/blob/master/error-handling-example/error-handling-client/src/main/java/com/example/grpc/client/ErrorHandlingGrpcClient.java
 // https://github.com/saturnism/grpc-by-example-java/blob/master/simple-grpc-client/src/main/java/com/example/grpc/client/MyGrpcClient.java#L38//
@@ -168,19 +168,18 @@ public class ClientImpl implements Client {
   ConcurrentHashMap<Long, ConsumerImpl> consumerRegistry = new ConcurrentHashMap<Long, ConsumerImpl>();
   ConcurrentHashMap<Long, ProducerImpl> producerRegistry = new ConcurrentHashMap<Long, ProducerImpl>();
 
-
   Map<String, ReadHandler<?, ?>> customReadHandlers = null;
   Map<Class, WriteHandler<?, ?>> customWriteHandlers = null;
   DefaultReadHandler<?> customReadDefaultHandler = null;
   WriteHandler<?, ?> customDefaultWriteHandler = null;
   MapReader<?, Map<Object, Object>, Object, Object> mapBuilder = null;
   ArrayReader<?, List<Object>, Object> listBuilder = null;
-  Reader transitReader = null;
-  Writer transitWriter = null;
+  Function<InputStream, Reader> transitReader = null;
+  Function<OutputStream, Writer> transitWriter = null;
 
   public ClientImpl(String host, Integer port, Boolean secure, String userToken, String apiKey,
-                    Reader transitReader,
-                    Writer transitWriter,
+                    Function<InputStream, Reader> transitReader,
+                    Function<OutputStream, Writer> transitWriter,
                     Map<String, ReadHandler<?, ?>> customReadHandlers,
                     Map<Class, WriteHandler<?, ?>> customWriteHandlers,
                     DefaultReadHandler<?> customReadDefaultHandler,
@@ -266,11 +265,11 @@ public class ClientImpl implements Client {
     return this.listBuilder;
   }
 
-  protected Reader getTransitReader() {
+  protected Function<InputStream, Reader> getTransitReader() {
     return this.transitReader;
   }
 
-  protected Writer getTransitWriter() {
+  protected Function<OutputStream, Writer> getTransitWriter() {
     return this.transitWriter;
   }
 

@@ -18,6 +18,9 @@ package com.turtlequeue;
 import java.util.concurrent.TimeUnit;
 import java.util.Map;
 import java.util.List;
+import java.util.function.Function;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import com.cognitect.transit.WriteHandler;
 import com.cognitect.transit.ReadHandler;
@@ -51,8 +54,8 @@ public class ClientBuilder {
   WriteHandler<?, ?> customDefaultWriteHandler = null;
   MapReader<?, Map<Object, Object>, Object, Object> mapBuilder = null;
   ArrayReader<?, List<Object>, Object> listBuilder = null;
-  Reader transitReader = null;
-  Writer transitWriter = null;
+  Function<InputStream, Reader> transitReader = null;
+  Function<OutputStream, Writer> transitWriter = null;
 
   public ClientBuilder setHost(String host) {
     this.host = host;
@@ -111,12 +114,12 @@ public class ClientBuilder {
     return this;
   }
 
-  public ClientBuilder transitReader(Reader reader) {
+  public ClientBuilder transitReader(Function<InputStream, Reader> reader) {
     this.transitReader = reader;
     return this;
   }
 
-  public ClientBuilder transitWriter(Writer writer) {
+  public ClientBuilder transitWriter(Function<OutputStream, Writer> writer) {
     this.transitWriter = writer;
     return this;
   }
