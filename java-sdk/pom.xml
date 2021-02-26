@@ -88,11 +88,10 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- https://mvnrepository.com/artifact/com.cognitect/transit-clj -->
     <dependency>
       <groupId>com.cognitect</groupId>
-      <artifactId>transit-clj</artifactId>
-      <version>1.0.324</version>
+      <artifactId>transit-java</artifactId>
+      <version>1.0.343</version>
     </dependency>
 
   </dependencies>
