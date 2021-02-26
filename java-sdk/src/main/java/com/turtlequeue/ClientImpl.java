@@ -20,6 +20,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.UUID;
 import java.util.Map;
+import java.util.List;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,6 +49,9 @@ import com.cognitect.transit.Writer;
 import com.cognitect.transit.WriteHandler;
 import com.cognitect.transit.ReadHandler;
 import com.cognitect.transit.DefaultReadHandler;
+import com.cognitect.transit.ArrayReader;
+import com.cognitect.transit.MapReader;
+import com.cognitect.transit.Reader;
 
 import com.google.common.base.MoreObjects;
 import com.google.protobuf.ByteString;
@@ -169,8 +173,20 @@ public class ClientImpl implements Client {
   Map<Class, WriteHandler<?, ?>> customWriteHandlers = null;
   DefaultReadHandler<?> customReadDefaultHandler = null;
   WriteHandler<?, ?> customDefaultWriteHandler = null;
+  MapReader<?, Map<Object, Object>, Object, Object> mapBuilder = null;
+  ArrayReader<?, List<Object>, Object> listBuilder = null;
+  Reader transitReader = null;
+  Writer transitWriter = null;
 
-  public ClientImpl(String host, Integer port, Boolean secure, String userToken, String apiKey, Map<String, ReadHandler<?, ?>> customReadHandlers, Map<Class, WriteHandler<?, ?>> customWriteHandlers, DefaultReadHandler<?> customReadDefaultHandler, WriteHandler<?, ?> customDefaultWriteHandler) {
+  public ClientImpl(String host, Integer port, Boolean secure, String userToken, String apiKey,
+                    Reader transitReader,
+                    Writer transitWriter,
+                    Map<String, ReadHandler<?, ?>> customReadHandlers,
+                    Map<Class, WriteHandler<?, ?>> customWriteHandlers,
+                    DefaultReadHandler<?> customReadDefaultHandler,
+                    WriteHandler<?, ?> customDefaultWriteHandler,
+                    MapReader<?, Map<Object, Object>, Object, Object> mapBuilder,
+                    ArrayReader<?, List<Object>, Object> listBuilder) {
     this.host = host;
     this.port = port;
     this.secure = secure;
@@ -181,6 +197,8 @@ public class ClientImpl implements Client {
     this.customWriteHandlers = customWriteHandlers;
     this.customReadDefaultHandler = customReadDefaultHandler;
     this.customDefaultWriteHandler = customDefaultWriteHandler;
+    this.mapBuilder = mapBuilder;
+    this.listBuilder = listBuilder;
 
     this.pendingRequests = new ConcurrentHashMap<Long, CompletableFuture>();
 
@@ -238,6 +256,22 @@ public class ClientImpl implements Client {
 
   protected WriteHandler<?, ?> getCustomDefaultWriteHandler() {
     return this.customDefaultWriteHandler;
+  }
+
+  protected MapReader<?, Map<Object, Object>, Object, Object> getMapBuilder() {
+    return this.mapBuilder;
+  }
+
+  protected ArrayReader<?, List<Object>, Object> getListBuilder() {
+    return this.listBuilder;
+  }
+
+  protected Reader getTransitReader() {
+    return this.transitReader;
+  }
+
+  protected Writer getTransitWriter() {
+    return this.transitWriter;
   }
 
   protected String getSdkVersion() {

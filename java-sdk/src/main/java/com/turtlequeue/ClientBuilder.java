@@ -17,10 +17,15 @@ package com.turtlequeue;
 
 import java.util.concurrent.TimeUnit;
 import java.util.Map;
+import java.util.List;
 
 import com.cognitect.transit.WriteHandler;
 import com.cognitect.transit.ReadHandler;
 import com.cognitect.transit.DefaultReadHandler;
+import com.cognitect.transit.ArrayReader;
+import com.cognitect.transit.MapReader;
+import com.cognitect.transit.Reader;
+import com.cognitect.transit.Writer;
 
 import com.turtlequeue.Client;
 import com.turtlequeue.ClientImpl;
@@ -44,6 +49,10 @@ public class ClientBuilder {
   Map<Class, WriteHandler<?, ?>> customWriteHandlers = null;
   DefaultReadHandler<?> customReadDefaultHandler = null;
   WriteHandler<?, ?> customDefaultWriteHandler = null;
+  MapReader<?, Map<Object, Object>, Object, Object> mapBuilder = null;
+  ArrayReader<?, List<Object>, Object> listBuilder = null;
+  Reader transitReader = null;
+  Writer transitWriter = null;
 
   public ClientBuilder setHost(String host) {
     this.host = host;
@@ -92,11 +101,35 @@ public class ClientBuilder {
     return this;
   }
 
+  public ClientBuilder transitMapBuilder(MapReader<?, Map<Object, Object>, Object, Object> mapBuilder) {
+    this.mapBuilder = mapBuilder;
+    return this;
+  }
+
+  public ClientBuilder transitListBuilder(ArrayReader<?, List<Object>, Object> listBuilder) {
+    this.listBuilder = listBuilder;
+    return this;
+  }
+
+  public ClientBuilder transitReader(Reader reader) {
+    this.transitReader = reader;
+    return this;
+  }
+
+  public ClientBuilder transitWriter(Writer writer) {
+    this.transitWriter = writer;
+    return this;
+  }
+
   public Client build() {
     return new ClientImpl(this.host, this.port, this.secure, this.userToken, this.apiKey,
+                          this.transitReader,
+                          this.transitWriter,
                           this.customReadHandlers,
                           this.customWriteHandlers,
                           this.customReadDefaultHandler,
-                          this.customDefaultWriteHandler);
+                          this.customDefaultWriteHandler,
+                          this.mapBuilder,
+                          this.listBuilder);
   }
 }

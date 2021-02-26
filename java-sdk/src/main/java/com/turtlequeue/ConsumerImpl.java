@@ -39,7 +39,11 @@ import io.grpc.ConnectivityState;
 
 import com.cognitect.transit.TransitFactory;
 import com.cognitect.transit.Reader;
+import com.cognitect.transit.SPI.ReaderSPI;
 import com.cognitect.transit.Writer;
+import com.cognitect.transit.impl.ReaderFactory;
+//import com.cognitect.transit.impl.ReaderFactory.ReaderImpl;
+import java.lang.reflect.Method;
 
 import com.google.common.collect.Queues;
 import com.google.common.base.MoreObjects;
@@ -408,8 +412,44 @@ public class ConsumerImpl<T> implements Consumer<T> {
   private Message<T> messageProcessed(CommandMessage msg){
     // Read the data from a stream
     InputStream in = new ByteArrayInputStream(msg.getPayload().toByteArray());
-    Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, in, this.c.getCustomReadHandlers(), this.c.getCustomReadDefaultHandler());
+    // https://github.com/cognitect/transit-clj/blob/700f205781df180c3b4b251341e7f1831f9f71cb/src/cognitect/transit.clj#L314-L316
+
+    // I am making a Java library that needs to be extended
+    // by having custom transit read/write
+    // it almost works except for the map and list builders
+    Reader reader = null;
+    if(this.c.getTransitReader() != null) {
+      // user-supplied reader
+      reader = this.c.getTransitReader();
+    } else {
+      reader = TransitFactory.reader(TransitFactory.Format.JSON, in, this.c.getCustomReadHandlers(), this.c.getCustomReadDefaultHandler());
+    }
+
+
+    //
+    // adding a call to .setBuilders and it fails to compile
+    // https://github.com/cognitect/transit-clj/blob/700f205781df180c3b4b251341e7f1831f9f71cb/src/cognitect/transit.clj#L310-L316
+    // https://github.com/cognitect/transit-java/blob/8fdb4d68c4ee0a9b21b38ef6009f28633d87e734/src/main/java/com/cognitect/transit/impl/ReaderFactory.java#L118-L125
+
+    //ReaderSPI readerS = reader.setBuilders(this.c.getMapBuilder(), this.c.getListBuilder());
+
+    // try {
+
+    //   Method method = reader.getClass().getMethod("setBuilders");
+    //   method.invoke(reader, this.c.getMapBuilder(), this.c.getListBuilder());
+
+    // } catch (Exception ex) {
+    //   logger.log(Level.WARNING, "cannot set custom builders ", ex);
+    // }
+
+    //ReaderSPI readerSpi = reader.setBuilders(this.c.getMapBuilder(), this.c.getListBuilder());
+
     T data = reader.read();
+
+    // compilation FAIL with
+    // cannot find symbol
+    //   [ERROR]   symbol:   method setBuilders(com.cognitect.transit.MapReader<capture#1 of ?,java.util.Map<java.lang.Object,java.lang.Object>,java.lang.Object,java.lang.Object>,com.cognitect.transit.ArrayReader<capture#2 of ?,java.util.List<java.lang.Object>,java.lang.Object>)
+    //   [ERROR]   location: variable reader of type com.cognitect.transit.Reader
 
     //logger.log(Level.FINE, "processing message: {0} \n {1} ", new Object[]{msg, data});
 

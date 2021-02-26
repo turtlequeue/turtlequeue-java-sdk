@@ -91,7 +91,13 @@ public class ProducerImpl<T> implements Producer {
     // Problem: need to accept the Clojure types
     ByteString.Output out = com.google.protobuf.ByteString.newOutput(); // = new ByteArrayOutputStream();
 
-    Writer<T> writer = TransitFactory.writer(TransitFactory.Format.JSON, out, this.c.getCustomWriteHandlers(), this.c.getCustomDefaultWriteHandler());
+    // TODO reuse Writer/Reader
+    Writer<T> writer = null;
+    if(this.c.getTransitWriter() != null) {
+      writer = this.c.getTransitWriter();
+    } else {
+      writer = TransitFactory.writer(TransitFactory.Format.JSON, out, this.c.getCustomWriteHandlers(), this.c.getCustomDefaultWriteHandler());
+    }
 
     try {
       writer.write(msg.getData());
@@ -125,15 +131,18 @@ public class ProducerImpl<T> implements Producer {
     }
 
     return this.c.<ResponsePublish>producerCommand(CommandProducer.newBuilder()
-                                                                               .setProducerId(this.getProducerId())
-                                                                               .setCommandSend(b.build())
-                                                                               .build())
+                                                   .setProducerId(this.getProducerId())
+                                                   .setCommandSend(b.build())
+                                                   .build())
       .thenApply((ResponsePublish rp) -> {
           MessageId messageId = MessageId.fromMessageIdData(rp.getMessageId());
 
           return messageId;
         });
   }
+
+  // TODO maybe a public .sendBinary and have a convenience method
+  // .send with transit as default?
 
   protected Long getProducerId() {
     return this.conf.getProducerId();

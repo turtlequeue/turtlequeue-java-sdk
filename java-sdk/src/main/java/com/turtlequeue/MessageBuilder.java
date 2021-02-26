@@ -115,4 +115,7 @@ public class MessageBuilder<T> {
     return this.producer.<T>send(msg);
   }
 
+  // TODO send + format
+  // ex. binary
+
 }
