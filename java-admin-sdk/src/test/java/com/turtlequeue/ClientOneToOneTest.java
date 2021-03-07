@@ -85,8 +85,11 @@ public class ClientOneToOneTest
         .build();
 
       AdminImpl.initialize();
-      c.admin().deleteTopic(t, true, true).get(1, TimeUnit.SECONDS);
-
+      try {
+        c.admin().deleteTopic(t, true, true).get(1, TimeUnit.SECONDS);
+      } catch (Exception ex) {
+        // exists from previous test
+      }
 
       Consumer consumer = c.newConsumer()
         .topic(t)
