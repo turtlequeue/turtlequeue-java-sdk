@@ -25,6 +25,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.Handler;
+
 public class TestConfLoader {
 
   Integer serverPort = null;
@@ -34,7 +38,28 @@ public class TestConfLoader {
   String userToken = null;
   String apiKey = null;
 
+  private static void setLevel(Level targetLevel) {
+    Logger root = Logger.getLogger("");
+    root.setLevel(targetLevel);
+    for (Handler handler : root.getHandlers()) {
+      handler.setLevel(targetLevel);
+    }
+    System.out.println("level set: " + targetLevel.getName());
+  }
+
+  void setupTestLog() {
+    // https://www.logicbig.com/tutorials/core-java-tutorial/logging/levels.html
+    System.setProperty("java.util.logging.SimpleFormatter.format",
+                       // https://docs.oracle.com/javase/9/docs/api/java/util/logging/SimpleFormatter.html
+                       "%1$tc %2$s%n%4$s: %5$s%6$s%n"
+                       // "[%1$tF %1$tT %1$tL] [%4$-7s] %5$s %n"
+                       );
+    setLevel(Level.INFO);
+  }
+
   void loadConf(String configFile) {
+    setupTestLog();
+
     final Properties pc = new Properties();
 
     try (final FileInputStream fis = new FileInputStream(configFile);) {

@@ -662,9 +662,10 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
 
             case REPLY_ERROR:
               {
-                TqClientException ex = TqClientException.makeTqExceptionFromReplyError(c.getReplyError());
+                logger.log(Level.SEVERE, "Error from the broker " + requestId);
 
-                logger.log(Level.FINE, "Error from the broker " + requestId + ex);
+                TqClientException ex = TqClientException.makeTqExceptionFromReplyError(c.getReplyError());
+                logger.log(Level.SEVERE, "Error from the broker as exception " + ex);
 
                 if(requestId != 0 ) {
                   clientRef.pendingRequests.get(requestId).completeExceptionally(ex);

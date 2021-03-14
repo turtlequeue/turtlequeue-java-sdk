@@ -91,7 +91,7 @@ public class ReaderTest
           .subscribe()
           .join();)
         {
-          // make a consumer to create the topic
+          // hacky: make a consumer to create the topic
         }
 
       Producer<Object> producer = c.newProducer()
