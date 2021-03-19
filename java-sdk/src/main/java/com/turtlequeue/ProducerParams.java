@@ -43,8 +43,9 @@ public class ProducerParams {
   Map<String, String> properties = null;
   HashingScheme hashingScheme = null;
   CompressionType compressionType = null;
+  Boolean blockIfQueueFull = null;
 
-  public ProducerParams(Long producerId, Topic topic, String producerName, Boolean enableBatching, Integer batchingMaxMessages, TimeUnit batchingMaxPublishDelayUnit, Long batchingMaxPublishDelayValue, Integer maxPendingMessages, Map<String, String> properties, HashingScheme hashingScheme, TimeUnit sendTimeoutUnit, Integer sendTimeoutValue) {
+    public ProducerParams(Long producerId, Topic topic, String producerName, Boolean enableBatching, Integer batchingMaxMessages, TimeUnit batchingMaxPublishDelayUnit, Long batchingMaxPublishDelayValue, Integer maxPendingMessages, Map<String, String> properties, HashingScheme hashingScheme, TimeUnit sendTimeoutUnit, Integer sendTimeoutValue, Boolean blockIfQueueFull) {
     this.producerId = producerId;
     this.topic = topic;
     this.producerName = producerName;
@@ -57,6 +58,7 @@ public class ProducerParams {
     this.sendTimeoutValue = sendTimeoutValue;
     this.properties = properties;
     this.hashingScheme = hashingScheme;
+    this.blockIfQueueFull = blockIfQueueFull;
   }
 
   public long getProducerId() {
@@ -110,6 +112,10 @@ public class ProducerParams {
   public CompressionType getCompressionType() {
     // TODO also at the SDK level
     return this.compressionType;
+  }
+
+  public Boolean getBlockIfQueueFull() {
+    return this.blockIfQueueFull;
   }
 
   @Override

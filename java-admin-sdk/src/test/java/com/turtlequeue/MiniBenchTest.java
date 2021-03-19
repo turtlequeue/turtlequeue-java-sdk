@@ -43,119 +43,118 @@ import com.turtlequeue.AcknowledgeBuilder.AckType;
 
 import com.turtlequeue.AdminImpl; // requiring it is necessary
 
-
 public class MiniBenchTest
 {
    // mvn -Dtest=MiniBenchTest#send100K -DfailIfNoTests=false test
   @Test(timeout = 60000)
   public void send100K()
   {
-    //
-    // this checks ordering implicitly
-    //
-    // TestConfLoader conf = new TestConfLoader();
-    // conf.loadConf("conf.properties");
 
-    // int numOfMessages = 1000;
+    //this checks ordering implicitly
 
-    // try(Client c = Client.builder()
-    //     .setHost(conf.getHost())
-    //     .setPort(conf.getServerPort())
-    //     .setSecure(conf.getSecure())
-    //     .setUserToken(conf.getUserToken())
-    //     .setApiKey(conf.getApiKey())
-    //     .build();) {
+    TestConfLoader conf = new TestConfLoader();
+    conf.loadConf("conf.properties");
 
-    //   c.connect().get(1, TimeUnit.SECONDS);
-    //   System.out.println("Client connected " + c);
+    int numOfMessages = 10000;
 
-    //   Topic t = c.newTopicBuilder()
-    //     .topic("testJavaSDKMiniBench")
-    //     .namespace("default")
-    //     .persistent(true)
-    //     .build();
+    try(Client c = Client.builder()
+        .setHost(conf.getHost())
+        .setPort(conf.getServerPort())
+        .setSecure(conf.getSecure())
+        .setUserToken(conf.getUserToken())
+        .setApiKey(conf.getApiKey())
+        .build();) {
 
-    //   AdminImpl.initialize();
-    //   try {
-    //     c.admin().deleteTopic(t, true, true).get(1, TimeUnit.SECONDS);
-    //   } catch (Exception ex) {
-    //     // exists from previous test
-    //   }
+      c.connect().get(1, TimeUnit.SECONDS);
+      System.out.println("Client connected " + c);
 
-    //   Consumer consumer = c.newConsumer()
-    //     .topic(t)
-    //     .subscriptionName("testSubMiniBench")
-    //     .initialPosition(MessageId.earliest)
-    //     .subscribe()
-    //     .get(1, TimeUnit.SECONDS);
+      Topic t = c.newTopicBuilder()
+        .topic("testJavaSDKMiniBench")
+        .namespace("default")
+        .persistent(true)
+        .build();
 
-    //   Producer producer = c.newProducer()
-    //     .topic(t)
-    //     // .blockIfQueueFull(true) TODO
-    //     .create()
-    //     .get(1, TimeUnit.SECONDS);
+      AdminImpl.initialize();
+      try {
+        c.admin().deleteTopic(t, true, true).get(1, TimeUnit.SECONDS);
+      } catch (Exception ex) {
+        // exists from previous test
+      }
 
-    //   Date [] sentTs = new Date[numOfMessages];
-    //   final CompletableFuture [] recvFutTs = new CompletableFuture[numOfMessages];
+      Consumer consumer = c.newConsumer()
+        .topic(t)
+        .subscriptionName("testSubMiniBench")
+        .initialPosition(MessageId.earliest)
+        .subscribe()
+        .get(1, TimeUnit.SECONDS);
 
-    //   Date [] recvTs = new Date[numOfMessages];
+      Producer producer = c.newProducer()
+        .blockIfQueueFull(true)
+        .topic(t)
+        .create()
+        .get(1, TimeUnit.SECONDS);
 
-    //   Runnable sendLoop =
-    //     () -> {
-    //     for(int i=0; i < numOfMessages ; i++) {
-    //       producer.newMessage().value(i).send().exceptionally(ex -> {
-    //           System.out.println("FAILED TO SEND " + ex);
-    //           return null;
-    //         });
-    //       // date of .publish called
-    //       sentTs[i] = new Date();
-    //       recvFutTs[i] = new CompletableFuture<Date>();
-    //     }};
+      Date [] sentTs = new Date[numOfMessages];
+      // final CompletableFuture [] recvFutTs = new CompletableFuture[numOfMessages];
+      // for(int i=0; i < numOfMessages ; i++) {
+      //   recvFutTs[i] = new CompletableFuture<Date>();
+      // }
+      //Date [] recvTs = new Date[numOfMessages];
 
-    //   Runnable receiveLoop =
-    //     () -> {
-    //     for(int i=0 ; i < numOfMessages ; i++) {
-    //       final int icpy = i;
-    //       try {
+      System.out.println("STARTING SEND/RECEIVE THREADS " + new Date());
 
+      Runnable sendLoop =
+        () -> {
+        for(int i=0; i < numOfMessages ; i++) {
+          producer.newMessage().value(i).send().exceptionally(ex -> {
+              System.out.println("FAILED TO SEND " + ex);
+              return null;
+            });
+          // date of .publish called
+          sentTs[i] = new Date();
+        }};
 
-    //       consumer.receive()
-    //       .thenApply(arg -> {
-    //           Message<Integer>  msg = (Message) arg;
-    //           final Date d = new Date();
-    //           recvFutTs[icpy].complete(d);
-    //           assertEquals((long)icpy, (long) msg.getData());
-    //           return msg;
-    //         })
-    //       .get();
-    //       } catch (Exception ex) {
-    //         System.out.println("ERROR RECEIVING " +  ex);
-    //       }
-    //     }};
+      Runnable receiveLoop =
+        () -> {
+        for(int i=0 ; i < numOfMessages ; i++) {
+          final int icpy = i;
+          try {
+            consumer.receive()
+              .thenApply(arg -> {
+                  Message msg = (Message) arg;
+                  // final Date d = new Date();
+                  // recvFutTs[icpy].complete(d);
+                  assertEquals((long)icpy, (long) msg.getData());
+                  return msg;
+                })
+              .get();
+          } catch (Exception ex) {
+            System.out.println("ERROR RECEIVING " +  ex);
+            ex.printStackTrace(System.out);
+          }
+        }};
 
-    //   Thread sendThread = new Thread(sendLoop);
-    //   Thread receiveThread = new Thread(receiveLoop);
-    //   sendThread.start();
-    //   receiveThread.start();
-    //   sendThread.join();
-    //   receiveThread.join();
-    //   try {
-    //     CompletableFuture.allOf(recvFutTs).get(1000 * numOfMessages, TimeUnit.MILLISECONDS);
-    //   } catch (Exception ex) {
-    //     System.out.println("TOO LONG, STATE WAS: ");
-    //     System.out.println("sentTs:" +  Arrays.toString(sentTs));
-    //     System.out.println("recvFutTs: " +  Arrays.toString(recvFutTs));
-    //     throw ex;
-    //   }
+      Thread sendThread = new Thread(sendLoop);
+      Thread receiveThread = new Thread(receiveLoop);
+      sendThread.start();
+      receiveThread.start();
+      sendThread.join();
+      receiveThread.join();
+      try {
+        //CompletableFuture.allOf(recvFutTs).get(100 * numOfMessages, TimeUnit.MILLISECONDS);
+        System.out.println("DONE RECEIVED ALL MESSAGES " + new Date());
+      } catch (Exception ex) {
+        System.out.println("TOO LONG, STATE WAS: ");
+        //System.out.println("sentTs:" +  Arrays.toString(sentTs));
+        //System.out.println("recvFutTs: " +  Arrays.toString(recvFutTs));
+        throw ex;
+      }
+    } catch (Exception e) {
+      System.out.println("FAIL!" + e);
+      e.printStackTrace(System.out);
+      fail("Should not have thrown any exception");
 
-    //   System.out.println("DONE RECEIVING -------------------- ");
-
-    // } catch (Exception e) {
-    //   System.out.println("FAIL!" + e);
-    //   e.printStackTrace(System.out);
-    //   fail("Should not have thrown any exception");
-
-    // }
+    }
   }
 
 }

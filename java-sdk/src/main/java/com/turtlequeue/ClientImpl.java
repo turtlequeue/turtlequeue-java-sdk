@@ -525,6 +525,11 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
       cmdBuilder.setHashingScheme(conf.getHashingScheme().toTqHashingScheme());
     }
 
+
+    if(conf.getBlockIfQueueFull() != null) {
+      cmdBuilder.setBlockIfQueueFull(conf.getBlockIfQueueFull());
+    }
+
     CommandProducerCreate cmd = cmdBuilder.build();
     long requestId = this.getNextRequestId();
     this.clientToBrokerOnNext(ClientToBroker.newBuilder()

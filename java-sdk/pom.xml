@@ -23,7 +23,7 @@
 
   <groupId>com.turtlequeue</groupId>
   <artifactId>java-sdk</artifactId>
-  <version>1.0.1</version>
+  <version>1.0.2-SNAPSHOT</version>
 
   <name>Turtlequeue Java SDK</name>
   <description>Turtlequeue is a hosted pub-sub messaging platform.</description>
@@ -77,7 +77,7 @@
     <dependency>
       <groupId>com.turtlequeue</groupId>
       <artifactId>sdk.proto</artifactId>
-      <version>1.0.0</version>
+      <version>1.0.2-SNAPSHOT</version>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/junit/junit -->

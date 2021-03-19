@@ -97,7 +97,6 @@ public class ConsumerImpl<T> implements Consumer<T> {
   // internal bookkeeping
   protected ConsumerParams conf;
 
-  //final BlockingQueue<Message<T>> incomingMessages;
   final BlockingQueue<CommandMessage> incomingMessages;
   protected Integer receiverQueueRefillThreshold = null;
   protected Integer maxReceiverQueueSize = null;
@@ -112,6 +111,9 @@ public class ConsumerImpl<T> implements Consumer<T> {
     .newUpdater(ConsumerImpl.class, "availablePermits");
   @SuppressWarnings("unused")
   private volatile int availablePermits = 0;
+
+  private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
 
   // initialization
   // returned to the SDK user on creation
@@ -184,7 +186,7 @@ public class ConsumerImpl<T> implements Consumer<T> {
   }
 
   protected void reconnect() {
-
+    // synchronized(this) ?
     this.clearReceiverQueue();
 
     this.c.registerConsumerBroker(this).thenRun(() -> {
@@ -320,11 +322,9 @@ public class ConsumerImpl<T> implements Consumer<T> {
 
 
   private CompletableFuture<Message<T>> pollPendingReceive() {
-    // some callbacks may have expired already, ex. .get(timeout)
     CompletableFuture<Message<T>> receivedFuture;
     while (true) {
       receivedFuture = pendingReceives.poll();
-      // skip done futures (cancelling a future could mark it done)
       if (receivedFuture == null || !receivedFuture.isDone()) {
         break;
       }
@@ -335,36 +335,43 @@ public class ConsumerImpl<T> implements Consumer<T> {
   protected void enqueue(CommandMessage msg) {
     // from Client to Consumer
     // put message into internal queue
-    // TODO look at
+    //
     // https://github.com/apache/pulsar/blob/983266d480f77543a29a74ac1970280abd9f804b/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerBase.java#L615-L622
-    // TODO what if pending?
     // https://github.com/apache/pulsar/blob/870a637b4906862a611e418341dd926e21458f08/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerImpl.java#L1251-L1284
+    // https://github.com/apache/pulsar/blob/a8b921cf15c0a0f652f1d9f62a6481efea243881/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerImpl.java#L406-L412
     //
     //
-    ConsumerPossibleStates state = this.stateMachine.getInternalState();
-    // see duringSeek
-    // https://github.com/apache/pulsar/blob/870a637b4906862a611e418341dd926e21458f08/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerImpl.java#L248
-    if(state != ConsumerPossibleStates.Ready) {
-      // while seeking and receiveing messages: these are stragglers from the previous subscription
-      // and can be discarded. Assume no need to nack as the pulsar consumer is seeking
-      logger.log(Level.FINE, "[.enqueue] skipping consumerId={0} state={1} messages={2}", new Object[] {consumerId, state, msg});
-      return;
-    }
+    // ConsumerPossibleStates state = this.stateMachine.getInternalState();
+    // // see duringSeek
+    // // https://github.com/apache/pulsar/blob/870a637b4906862a611e418341dd926e21458f08/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerImpl.java#L248
+    // if(state != ConsumerPossibleStates.Ready) {
+    //   // while seeking and receiveing messages: these are stragglers from the previous subscription
+    //   // and can be discarded. Assume no need to nack as the pulsar consumer is seeking
+    //   logger.log(Level.FINE, "[.enqueue] skipping consumerId={0} state={1} messages={2}", new Object[] {consumerId, state, msg});
+    //   return;
+    // }
+    //
 
-    if(pendingReceives.isEmpty()) {
-      logger.log(Level.FINE, "[.enqueue] putting {0} in incomingMessages {1}", new Object[] {msg, incomingMessages});
-
-      this.incomingMessages.add(msg);
-    } else {
-      // there are already .receive futures waiting
-      logger.log(Level.FINE, "[.enqueue] there are already {0} .receive futures waiting", pendingReceives.size());
-      final CompletableFuture<Message<T>> userReceiveFuture = pollPendingReceive();
-      if (userReceiveFuture == null) {
-        // did not find a suitable callback
+    try {
+      lock.writeLock().lock();
+      if(pendingReceives.isEmpty()) {
+        logger.log(Level.FINE, "[.enqueue] putting {0} in incomingMessages {1}", new Object[] {msg, incomingMessages});
         this.incomingMessages.add(msg);
-        return;
+      } else {
+        // there are already .receive futures waiting
+        logger.log(Level.FINE, "[.enqueue] there are already {0} .receive futures waiting", pendingReceives.size());
+        final CompletableFuture<Message<T>> userReceiveFuture = pollPendingReceive();
+        if (userReceiveFuture == null) {
+          this.incomingMessages.add(msg);
+          return;
+        }
+        userReceiveFuture.complete(messageProcessed(msg));
       }
-      userReceiveFuture.complete(messageProcessed(msg));
+    } catch (Exception ex) {
+      logger.log(Level.SEVERE, "[.enqueue] unknown exception", ex);
+      throw(ex);
+    } finally {
+      lock.writeLock().unlock();
     }
   }
 
@@ -375,14 +382,20 @@ public class ConsumerImpl<T> implements Consumer<T> {
   /**
    * send the flow command to have the broker start pushing messages
    */
-  // TODO <BrokerToClient<ReplySuccess>>
-  private CompletableFuture sendFlowPermitsToBroker(int numMessages) {
-    return this.c.consumerCommand(CommandConsumer.newBuilder()
+  private CompletableFuture<Void> sendFlowPermitsToBroker(int numMessages) {
+    return this.c.<Tq.ReplySuccess>consumerCommand(CommandConsumer.newBuilder()
                                   .setConsumerId(this.getConsumerId())
                                   .setCommandFlow(CommandFlow.newBuilder()
                                                   .setMessagePermits(numMessages)
                                                   .build())
-                                  .build());
+                                  .build())
+      .thenRun(() -> {
+          logger.log(Level.FINE, "Did request permits successfully", numMessages);
+        })
+      .exceptionally(ex -> {
+          logger.log(Level.WARNING, "Error requesting permits {0}", ex);
+          return null;
+        });
   }
 
   protected void increaseAvailablePermits(int delta) {
@@ -480,7 +493,11 @@ public class ConsumerImpl<T> implements Consumer<T> {
     CommandMessage msg;
     // https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ConcurrentLinkedQueue.html?is-external=true
     // migth need a lock as pulsar does - re-evaluate when batching is added
+    // https://github.com/apache/pulsar/blob/a8b921cf15c0a0f652f1d9f62a6481efea243881/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerImpl.java#L406-L412
+
     try {
+      lock.readLock().lock();
+
       msg = incomingMessages.poll(0, TimeUnit.MILLISECONDS);
       //logger.log(Level.FINER, "[.receive] did poll and got [{0}]", msg);
       if (msg == null) {
@@ -506,6 +523,11 @@ public class ConsumerImpl<T> implements Consumer<T> {
       // } else {
       //   return null;
       // }
+    } catch (Exception ex) {
+      logger.log(Level.SEVERE, "[.receive] error receiving", ex);
+      throw(ex);
+    } finally {
+      lock.readLock().unlock();
     }
 
     return result;

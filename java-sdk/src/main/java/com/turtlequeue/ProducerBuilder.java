@@ -58,6 +58,7 @@ public class ProducerBuilder {
   HashingScheme hashingScheme = null;
   TimeUnit sendTimeoutUnit = null;
   Integer sendTimeoutValue = null;
+  Boolean blockIfQueueFull = null;
 
   public ProducerBuilder(ClientImpl c) {
     this.c = c;
@@ -119,12 +120,16 @@ public class ProducerBuilder {
   }
 
 
-    public ProducerBuilder sendTimeout(int sendTimeout, TimeUnit unit) {
+  public ProducerBuilder sendTimeout(int sendTimeout, TimeUnit unit) {
     this.sendTimeoutUnit = unit;
     this.sendTimeoutValue = sendTimeout;
     return this;
   }
 
+  public ProducerBuilder blockIfQueueFull(boolean blockIfQueueFull) {
+    this.blockIfQueueFull = blockIfQueueFull;
+    return this;
+  }
 
   // commented until I am convinced there is a good use case
   // public ProducerBuilder setSequenceId (Long sequenceId) {
@@ -133,7 +138,7 @@ public class ProducerBuilder {
   // }
 
   public CompletableFuture<ProducerImpl> create() {
-    ProducerParams conf =  new ProducerParams(this.c.getNextProducerId(), this.topicBuilder.build(), this.producerName, this.enableBatching, this.batchingMaxMessages, this.batchingMaxPublishDelayUnit, this.batchingMaxPublishDelayValue, this.maxPendingMessages, this.properties, this.hashingScheme, this.sendTimeoutUnit, this.sendTimeoutValue);
+    ProducerParams conf =  new ProducerParams(this.c.getNextProducerId(), this.topicBuilder.build(), this.producerName, this.enableBatching, this.batchingMaxMessages, this.batchingMaxPublishDelayUnit, this.batchingMaxPublishDelayValue, this.maxPendingMessages, this.properties, this.hashingScheme, this.sendTimeoutUnit, this.sendTimeoutValue, this.blockIfQueueFull);
 
     return new ProducerImpl(this.c, conf).createReturn();
   }

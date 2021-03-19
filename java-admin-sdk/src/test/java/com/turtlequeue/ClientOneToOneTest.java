@@ -137,7 +137,7 @@ public class ClientOneToOneTest
         consumer.receive()
           .thenApply(arg -> {
               Message msg = (Message) arg;
-              System.out.println("RECEIVED: recvFutTs=" +  Arrays.toString(recvFutTs));
+              //System.out.println("RECEIVED: recvFutTs=" +  Arrays.toString(recvFutTs));
               final Date d = new Date();
               recvFutTs[icpy].complete(d);
               assertEquals(icpy, msg.getData());
@@ -148,6 +148,8 @@ public class ClientOneToOneTest
       // give it some time because the small receiver queue means 1 flow exchange every time
       try {
         CompletableFuture.allOf(recvFutTs).get(500 * numOfMessages, TimeUnit.MILLISECONDS);
+        System.out.println("DONE RECEIVING -------------------- ");
+
       } catch (Exception ex) {
         System.out.println("TOO LONG, STATE WAS: ");
         System.out.println("sentTs:" +  Arrays.toString(sentTs));
