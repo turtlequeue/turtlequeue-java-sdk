@@ -80,6 +80,7 @@ import com.turtlequeue.sdk.api.proto.Tq.CommandConsumer;
 import com.turtlequeue.sdk.api.proto.Tq.CommandEndOfTopic;
 import com.turtlequeue.sdk.api.proto.Tq.CommandProducer;
 import com.turtlequeue.sdk.api.proto.Tq.CommandProducerCreate;
+import com.turtlequeue.sdk.api.proto.Tq.CommandGetLastMessageIdResponse;
 
 import com.turtlequeue.sdk.api.proto.TurtleQueueGrpc.TurtleQueueStub;
 import com.turtlequeue.sdk.api.proto.Tq.BrokerToClient.BtocOneofCase;
@@ -677,6 +678,19 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
                   clientRef.pendingRequests.remove(requestId);
                 } else {
                   logger.log(Level.WARNING, "Could not find matching request for error" + requestId + ex);
+                }
+              }
+              break;
+
+            case COMMAND_GET_LAST_MESSAGE_ID_RESPONSE:
+              {
+                if(requestId != 0 ) {
+                  CommandGetLastMessageIdResponse resp = c.getCommandGetLastMessageIdResponse();
+                  // TODO null-checking
+                  clientRef.pendingRequests.get(requestId).complete(resp);
+                  clientRef.pendingRequests.remove(requestId);
+                } else {
+                  logger.log(Level.WARNING, "Could not find matching request" + requestId + c);
                 }
               }
               break;

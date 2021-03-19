@@ -58,6 +58,8 @@ import com.turtlequeue.sdk.api.proto.Tq.CommandAck;
 import com.turtlequeue.sdk.api.proto.Tq.CommandRedeliverUnacknowledgedMessages;
 import com.turtlequeue.sdk.api.proto.Tq.CommandCloseConsumer;
 import com.turtlequeue.sdk.api.proto.Tq.CommandSeek;
+import com.turtlequeue.sdk.api.proto.Tq.CommandGetLastMessageId;
+import com.turtlequeue.sdk.api.proto.Tq.CommandGetLastMessageIdResponse;
 
 import com.turtlequeue.Consumer;
 import com.turtlequeue.ConsumerImpl;
@@ -112,6 +114,9 @@ public class ConsumerImpl<T> implements Consumer<T> {
   @SuppressWarnings("unused")
   private volatile int availablePermits = 0;
 
+  protected volatile MessageId lastDequeuedMessageId = MessageId.earliest;
+  private volatile MessageId lastMessageIdInBroker = MessageId.earliest;
+
   private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
 
@@ -130,14 +135,12 @@ public class ConsumerImpl<T> implements Consumer<T> {
     this.subName = conf.getSubName();
     this.consumerName = conf.getConsumerName();
     this.priority = conf.getPriority();
-    this.initialPosition = conf.getInitialPosition();
+    this.initialPosition = conf.getInitialPosition(); // https://github.com/apache/pulsar/blob/9d44c44f01a4b753aafe73ffe67448e4c281a9f6/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerImpl.java#L227-L228
+
     this.ackTimeoutCount = conf.getAckTimeout();
     this.ackTimeoutUnit = conf.getAckTimeoutTimeUnit();
     this.endOfTopicMessageListener = conf.getEndOfTopicMessageListener();
-
-    // Pulsar has a queue of CompletableFuture
-    // that gets poured into a receiver queue
-
+    // queue of CompletableFuture that gets poured into a receiver queue
     this.maxReceiverQueueSize = conf.getReceiverQueueSize();
     this.receiverQueueRefillThreshold = conf.getReceiverQueueSize() / 2;
     this.incomingMessages = new GrowableArrayBlockingQueue<>();
@@ -211,13 +214,67 @@ public class ConsumerImpl<T> implements Consumer<T> {
     return this.hasReachedEndOfTopic;
   }
 
-
+  private boolean hasMoreMessages(MessageId lastMessageIdInBroker, MessageId messageId) {
+    return lastMessageIdInBroker.compareTo(messageId) > 0 && lastMessageIdInBroker.getEntryId() != -1;
+  }
 
   public CompletableFuture<Boolean> hasMessageAvailable() {
-    // TODO see if necessary
+
+    final CompletableFuture<Boolean> booleanFuture = new CompletableFuture<>();
+
     // https://github.com/apache/pulsar/blob/9d44c44f01a4b753aafe73ffe67448e4c281a9f6/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerImpl.java#L1979
-    //
-    return new CompletableFuture<Boolean>();
+    logger.log(Level.WARNING, "[consumer] has message available? lastMessageInBroker {1} lastMessageDequeued {2}", new Object[]{this, this.lastMessageIdInBroker, this.lastDequeuedMessageId});
+
+    if(lastDequeuedMessageId == MessageId.earliest) {
+
+      this.c.<CommandGetLastMessageIdResponse>consumerCommand(CommandConsumer.newBuilder()
+                                                              .setConsumerId(this.getConsumerId())
+                                                              .setCommandGetLastMessageId(CommandGetLastMessageId.newBuilder()
+                                                                                          .build())
+                                                              .build())
+        .thenApply((CommandGetLastMessageIdResponse resp) -> {
+
+            MessageId last = MessageIdImpl.fromMessageIdData(resp.getLastMessageId());
+            this.lastMessageIdInBroker = last;
+
+            booleanFuture.complete(hasMoreMessages(last, this.lastDequeuedMessageId));
+            return null;
+          })
+        .exceptionally(t -> {
+            logger.log(Level.WARNING, "[consumer] could not get last message available consumer={0} {1}", new Object[]{this, t});
+            return null;
+          });
+
+    } else {
+      // have read messages
+      if (hasMoreMessages(this.lastMessageIdInBroker, this.lastDequeuedMessageId)) {
+        //
+        // optimization - if the difference is not much (less than N = 2 messages)
+        // then async ask the broker already - store the pending promise too
+        //
+        booleanFuture.complete(true);
+        return booleanFuture;
+      }
+
+      this.c.<CommandGetLastMessageIdResponse>consumerCommand(CommandConsumer.newBuilder()
+                                                              .setConsumerId(this.getConsumerId())
+                                                              .setCommandGetLastMessageId(CommandGetLastMessageId.newBuilder()
+                                                                                          .build())
+                                                              .build())
+        .thenApply((CommandGetLastMessageIdResponse resp) -> {
+            MessageId last = MessageIdImpl.fromMessageIdData(resp.getLastMessageId());
+            this.lastMessageIdInBroker = last;
+
+            booleanFuture.complete(hasMoreMessages(last, this.lastDequeuedMessageId));
+            return null;
+          })
+        .exceptionally(t -> {
+            logger.log(Level.WARNING, "[consumer] could not get last message available consumer={0} {1}", new Object[]{this, t});
+            return null;
+          });
+    }
+
+    return booleanFuture;
   }
 
   // see https://github.com/apache/pulsar/blob/9d44c44f01a4b753aafe73ffe67448e4c281a9f6/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerImpl.java#L1911
@@ -236,6 +293,7 @@ public class ConsumerImpl<T> implements Consumer<T> {
 
       this.stateMachine.setState(ConsumerPossibleStates.Seeking);
       this.clearReceiverQueue();
+
       this.c.<Tq.ReplySuccess>consumerCommand(CommandConsumer.newBuilder()
                                               .setConsumerId(this.getConsumerId())
                                               .setCommandSeek(CommandSeek.newBuilder()
@@ -244,6 +302,7 @@ public class ConsumerImpl<T> implements Consumer<T> {
                                               .build())
         .handle((Tq.ReplySuccess resp, Throwable t) -> {
 
+            this.lastDequeuedMessageId = MessageId.earliest;
             this.stateMachine.setState(ConsumerPossibleStates.Ready);
 
             if(t == null) {
@@ -282,6 +341,8 @@ public class ConsumerImpl<T> implements Consumer<T> {
                                                               .build())
                                               .build())
         .handle((Tq.ReplySuccess resp, Throwable t) -> {
+
+            this.lastDequeuedMessageId = MessageId.earliest;
 
             this.stateMachine.setState(ConsumerPossibleStates.Ready);
 
@@ -417,9 +478,10 @@ public class ConsumerImpl<T> implements Consumer<T> {
     }
   }
 
-  protected synchronized void onMessageProcessed() {
+  protected synchronized void onMessageProcessed(Message<T> msg) {
     // housekeeping for the flow
     this.increaseAvailablePermits(1);
+    this.lastDequeuedMessageId = msg.getMessageId();
   }
 
   private Message<T> messageProcessed(CommandMessage msg){
@@ -482,7 +544,7 @@ public class ConsumerImpl<T> implements Consumer<T> {
                                            null,
                                            null);
 
-    this.onMessageProcessed();
+    this.onMessageProcessed(result);
 
     return result;
   }

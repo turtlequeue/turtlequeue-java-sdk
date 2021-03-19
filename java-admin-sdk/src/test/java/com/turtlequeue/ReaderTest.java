@@ -80,6 +80,8 @@ public class ReaderTest
         .persistent(true)
         .build();
 
+      System.out.println("TOPIC IS " + t);
+
       AdminImpl.initialize();
       try {c.admin().deleteTopic(t, true).get(1, TimeUnit.SECONDS);} catch (Exception ex) {}
 
@@ -117,24 +119,33 @@ public class ReaderTest
         .create()
         .get(1, TimeUnit.SECONDS);
 
+      assertEquals(true, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
+
       Message msg1 = reader.readNext().get(1, TimeUnit.SECONDS);
       assertEquals(msgId1, msg1.getMessageId());
+      assertEquals(true, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
 
       Message msg2 = reader.readNext().get(1, TimeUnit.SECONDS);
       assertEquals(msgId2, msg2.getMessageId());
+      assertEquals(true, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
 
       Message msg3 = reader.readNext().get(1, TimeUnit.SECONDS);
       assertEquals(msgId3, msg3.getMessageId());
+      assertEquals(true, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
 
       Message msg4 = reader.readNext().get(1, TimeUnit.SECONDS);
       assertEquals(msgId4, msg4.getMessageId());
+      assertEquals(true, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
 
       Message msg5 = reader.readNext().get(1, TimeUnit.SECONDS);
       assertEquals(msgId5, msg5.getMessageId());
+      assertEquals(false, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
 
       // the topic has NOT been closed
       Thread.sleep(1000);
       assertEquals(false, reader.hasReachedEndOfTopic());
+
+      System.out.println("DID END UP AT THE SEEKING POINT ================ ");
 
       // re-read from messageID 3
       // (ie. seek to messageId 2, the next message will be 3)
@@ -142,21 +153,27 @@ public class ReaderTest
 
       Message msg_2_3 = reader.readNext().get(1, TimeUnit.SECONDS);
       assertEquals(msgId3, msg_2_3.getMessageId());
+      assertEquals(true, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
 
       Message msg_2_4 = reader.readNext().get(1, TimeUnit.SECONDS);
       assertEquals(msgId4, msg_2_4.getMessageId());
+      assertEquals(true, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
 
       Message msg_2_5 = reader.readNext().get(1, TimeUnit.SECONDS);
       assertEquals(msgId5, msg_2_5.getMessageId());
+      assertEquals(false, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
 
       // read from a Date/timestamp
       reader.seek(between3And4.getTime()).get(1, TimeUnit.SECONDS);
+      assertEquals(true, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
 
       Message msg_3_4 = reader.readNext().get(1, TimeUnit.SECONDS);
       assertEquals(msgId4, msg_3_4.getMessageId());
+      assertEquals(true, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
 
       Message msg_3_5 = reader.readNext().get(1, TimeUnit.SECONDS);
       assertEquals(msgId5, msg_3_5.getMessageId());
+      assertEquals(false, reader.hasMessageAvailable().get(1, TimeUnit.SECONDS));
 
     } catch (Exception e) {
       System.out.println("FAIL!" + e);
