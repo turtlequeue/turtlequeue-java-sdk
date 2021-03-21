@@ -41,6 +41,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.time.Instant;
+import java.time.Duration;
 
 import io.grpc.stub.ClientCallStreamObserver;
 
@@ -178,6 +180,8 @@ public class ClientImpl implements Client {
   ArrayReader<?, List<Object>, Object> listBuilder = null;
   Function<InputStream, Reader> transitReader = null;
   Function<OutputStream, Writer> transitWriter = null;
+
+  private volatile Instant lastMessageSentAt = null;
 
   public ClientImpl(String host, Integer port, Boolean secure, String userToken, String apiKey,
                     Function<InputStream, Reader> transitReader,
@@ -392,16 +396,19 @@ public class ClientImpl implements Client {
                                 .setCommandPing(CommandPing.newBuilder().build())
                                 .build());
 
-      this.<ReplyPong>waitForResponse(requestId)
-        .acceptEither(timeoutAfter(15, TimeUnit.SECONDS),
-                      (replyPong) -> {
-                        this.pendingRequests.remove(requestId);
-                      })
-        .exceptionally((ex) -> {
-            logger.log(Level.WARNING, "Ping timeout requestId={0}, State={1}, Exception:\n{2}", new Object[]{requestId, st, ex});
-            this.pendingRequests.remove(requestId);
-            return null;
-          });
+      // check when the last message out was older than  15 seconds - otherwise no need
+      if(lastMessageSentAt != null && Duration.between(lastMessageSentAt, Instant.now()).compareTo(Duration.ofSeconds(15)) > 0) {
+        this.<ReplyPong>waitForResponse(requestId)
+          .acceptEither(timeoutAfter(15, TimeUnit.SECONDS),
+                        (replyPong) -> {
+                          this.pendingRequests.remove(requestId);
+                        })
+          .exceptionally((ex) -> {
+              logger.log(Level.WARNING, "Ping timeout requestId={0}, State={1}, Exception:\n{2}", new Object[]{requestId, st, ex});
+              this.pendingRequests.remove(requestId);
+              return null;
+            });
+      }
     } else {
       logger.log(Level.WARNING, "Cannot ping, the connections is State={0}", new Object[]{st});
     }
@@ -831,8 +838,10 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
     // https://github.com/grpc/grpc-java/issues/5997
     // Since individual StreamObservers are not thread-safe, if multiple threads will be writing to a StreamObserver concurrently, the application must synchronize calls.
     // logger.log(Level.INFO , "clientToBrokerOnNext: {0}", cmd);
+
     synchronized (this.clientToBroker) {
       this.clientToBroker.onNext(cmd);
+      this.lastMessageSentAt = Instant.now();
     }
   }
 
