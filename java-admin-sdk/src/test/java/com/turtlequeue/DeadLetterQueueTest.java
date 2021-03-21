@@ -16,17 +16,12 @@
 package com.turtlequeue;
 
 import java.util.Properties;
-import java.util.Date;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-import java.io.FileInputStream;
-import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.CompletableFuture;
-
-import com.google.common.collect.Maps;
-
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -40,19 +35,28 @@ import com.turtlequeue.ClientImpl;
 import com.turtlequeue.ClientBuilder;
 import com.turtlequeue.MessageId;
 import com.turtlequeue.SubType;
+import com.turtlequeue.Topic;
 import com.turtlequeue.SubInitialPosition;
-import com.turtlequeue.AcknowledgeBuilder.AckType; // TODO move to own class?
+import com.turtlequeue.AcknowledgeBuilder.AckType;
 
 import com.turtlequeue.AdminImpl; // requiring it is necessary
 
-public class NackTest
+public class DeadLetterQueueTest
+// test that the redelivery count is incremented
 {
 
   @Test(timeout = 10000)
-  public void canConnectSendMessages()
+  public void redeliveryCountIsIncremented()
   {
+    //
+    // this checks ordering implicitly
+    //
     TestConfLoader conf = new TestConfLoader();
     conf.loadConf("conf.properties");
+
+    int r = ThreadLocalRandom.current().nextInt(1, 1001);
+
+    int numOfMessages = 10;
 
     try(
         Client c = Client.builder()
@@ -65,74 +69,67 @@ public class NackTest
         ) {
 
       c.connect().get(1, TimeUnit.SECONDS);
-
-      System.out.println("Client connected: " + c);
-
-      int r = ThreadLocalRandom.current().nextInt(1, 1001);
+      System.out.println("Client connected " + c);
 
       Topic t = c.newTopicBuilder()
-        .topic("testJavaSDK_Nack" + r)
+        .topic("testJavaSDKRedeliveryCount" + r)
         .namespace("default")
         .persistent(true)
         .build();
 
       AdminImpl.initialize();
       try {
-        c.admin().deleteTopic(t, true).get(1, TimeUnit.SECONDS);
+        c.admin().deleteTopic(t, true, true).get(1, TimeUnit.SECONDS);
       } catch (Exception ex) {
-        // not found or already has producers/consumers -> ignore
+        // exists from previous test
       }
 
-      Consumer<Date> consumer = c.newConsumer()
+      Consumer consumer = c.newConsumer()
         .topic(t)
-        .subscriptionName("testSub")
-        .persistent(true)
+        .subscriptionName("my-sub")
+        .subscriptionType(SubType.Shared)
+        .ackTimeout(1001, TimeUnit.MILLISECONDS)
+        .negativeAckRedeliveryDelay(1001, TimeUnit.MILLISECONDS)
+        .deadLetterPolicy(DeadLetterPolicy.builder()
+                          .maxRedeliverCount(2)
+                          //(.deadLetterTopic (str topic-str "-DQL"))
+                          .build())
         .initialPosition(MessageId.earliest)
-        .receiverQueueSize(4)
-        .ackTimeout(10, TimeUnit.SECONDS)
         .subscribe()
         .get(1, TimeUnit.SECONDS);
 
-      Date msg1 = new Date();
-
-      Producer<Date> producer = c.newProducer()
+      Producer producer = c.newProducer()
         .topic(t)
         .create()
         .get(1, TimeUnit.SECONDS);
 
-      MessageId messageId1 = producer.newMessage()
-        .value(msg1)
-        .send()
-        .get(1, TimeUnit.SECONDS);
+      producer.newMessage()
+        .value("hello TQ")
+        .send();
 
-      // message 1: Date
-      Message<Date> rcv1 = consumer.receive().get(1,  TimeUnit.SECONDS);
-      Date d = rcv1.getData();
+      // 1 normal, maxredeliver = 2 => 3
+      List<Integer> calledWithCount = new ArrayList<Integer>();
+      for(int i=0 ; i < 3 ; i++) {
+        final int icpy = i;
+        consumer.receive()
+          .thenApply(arg -> {
+              Message msg = (Message) arg;
+              final int redeliveryCount = msg.getRedeliveryCount();
+              calledWithCount.add(redeliveryCount);
+              if (redeliveryCount > 2) {
+                consumer.acknowledge(msg);
+                assertEquals(3, redeliveryCount);
+              }
+              return msg;
+            }).get(5, TimeUnit.SECONDS);
+      }
 
-      assertEquals(messageId1, rcv1.getMessageId());
-      assertEquals(msg1, rcv1.getData());
-
-      consumer.nonAcknowledge(rcv1).get(1,  TimeUnit.SECONDS);
-
-      // force redelivery of un-acknowledged messages (avoids waiting 10 seconds)
-      consumer.redeliverUnacknowledgedMessages().get(1, TimeUnit.SECONDS);
-
-      // message 4: redelivery of the above message
-      System.out.println("Waiting for re-delivery...");
-
-      Message<Date> rcv2 = consumer.receive().get(1,  TimeUnit.SECONDS);
-
-      assertEquals(messageId1, rcv1.getMessageId());
-      rcv2.acknowledge().get(1, TimeUnit.SECONDS);
-
-      // cleanup topic
-      c.admin().deleteTopic(t, true).get(1, TimeUnit.SECONDS);
+      assertEquals(calledWithCount, Arrays.asList(0, 1, 2));
 
     } catch (Exception e) {
       System.out.println("FAIL!" + e);
       e.printStackTrace(System.out);
-      fail("NackTest: Exception FAIL");
+      fail("Should not have thrown any exception");
     }}
-
 
 }

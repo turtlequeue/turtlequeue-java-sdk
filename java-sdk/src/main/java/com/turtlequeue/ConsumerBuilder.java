@@ -30,6 +30,7 @@ import com.turtlequeue.Topic;
 import com.turtlequeue.TopicBuilderImpl;
 import com.turtlequeue.SubscriptionMode;
 import com.turtlequeue.EndOfTopicMessageListener;
+import com.turtlequeue.DeadLetterPolicy;
 
 public class ConsumerBuilder {
 
@@ -50,6 +51,10 @@ public class ConsumerBuilder {
   Integer receiverQueueSize = null;
   SubscriptionMode subscriptionMode = null;
   String jsonPath = null;
+  Boolean enableRetry = null;
+  Long negativeAckRedeliveryDelayValue = null;
+  TimeUnit negativeAckRedeliveryDelayUnit = null;
+  DeadLetterPolicy deadLetterQueuePolicy = null;
 
   public ConsumerBuilder(ClientImpl c) {
     this.c = c;
@@ -102,6 +107,10 @@ public class ConsumerBuilder {
     return this;
   }
 
+  public ConsumerBuilder subscriptionInitialPosition (MessageId messageId) {
+    return this.initialPosition(messageId); // alias
+  }
+
   public ConsumerBuilder metadata (Map<String, String> metadata) {
     this.metadata = metadata;
     return this;
@@ -133,9 +142,24 @@ public class ConsumerBuilder {
     return this;
   }
 
-
   protected ConsumerBuilder jsonPath(String jsonPath) {
     this.jsonPath = jsonPath;
+    return this;
+  }
+
+  public ConsumerBuilder enableRetry(boolean b) {
+    this.enableRetry = b;
+    return this;
+  }
+
+  public ConsumerBuilder negativeAckRedeliveryDelay(long value, TimeUnit unit) {
+    this.negativeAckRedeliveryDelayValue = value;
+    this.negativeAckRedeliveryDelayUnit = unit;
+    return this;
+  }
+
+  public ConsumerBuilder deadLetterPolicy(DeadLetterPolicy policy) {
+    this.deadLetterQueuePolicy = policy;
     return this;
   }
 
@@ -145,7 +169,8 @@ public class ConsumerBuilder {
       throw new IllegalArgumentException("subName must be specified on the ConsumerBuilder object.");
     }
 
-    return new ConsumerParams(this.c.getNextConsumerId(), this.topicBuilder.build(), this.subName, this.consumerName, this.subType, this.priority, this.initialPosition, this.metadata, this.receiverQueueSize, this.ackTimeout, this.ackTimeoutTimeUnit, this.endOfTopicMessageListener, this.subscriptionMode, this.jsonPath);
+    return new ConsumerParams(this.c.getNextConsumerId(), this.topicBuilder.build(), this.subName, this.consumerName, this.subType, this.priority, this.initialPosition, this.metadata, this.receiverQueueSize, this.ackTimeout, this.ackTimeoutTimeUnit, this.endOfTopicMessageListener, this.subscriptionMode, this.jsonPath, this.negativeAckRedeliveryDelayValue, this.negativeAckRedeliveryDelayUnit, this.enableRetry, this.deadLetterQueuePolicy);
+
   }
 
   public CompletableFuture<Consumer> subscribe() {

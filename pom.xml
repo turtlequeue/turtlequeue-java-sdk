@@ -47,8 +47,8 @@
 
   <scm>
     <connection>scm:git:git@github.com:turtlequeue/sdk.proto.git</connection>
-    <developerConnection>scm:git:git@github.com:turtlequeue/sdk.proto.git</developerConnection>
-    <url>https://github.com/turtlequeue/sdk.prodo</url>
+    <developerConnection>scm:git:git@github.com:turtlequeue/java-sdk.git</developerConnection>
+    <url>https://github.com/turtlequeue/java-sdk</url>
     <tag>HEAD</tag>
   </scm>
 

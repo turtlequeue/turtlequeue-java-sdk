@@ -99,6 +99,7 @@ import com.turtlequeue.ClientPossibleStates;
 import com.turtlequeue.ConsumerBuilder;
 import com.turtlequeue.SubscriptionMode;
 import com.turtlequeue.Encoder;
+import com.turtlequeue.DeadLetterPolicy;
 
 //
 // https://github.com/saturnism/grpc-by-example-java/blob/master/error-handling-example/error-handling-client/src/main/java/com/example/grpc/client/ErrorHandlingGrpcClient.java
@@ -461,6 +462,32 @@ public class ClientImpl implements Client {
 
     if(conf.getJsonPath() != null) { // reader
       cmdBuilder.setJsonPath(conf.getJsonPath());
+    }
+
+    if(conf.getEnableRetry() != null) {
+      cmdBuilder.setEnableRetry(conf.getEnableRetry());
+    }
+
+    if(conf.getNegativeAckRedeliveryDelayValue() != null && conf.getNegativeAckRedeliveryDelayUnit() != null) {
+      cmdBuilder.setNegativeAckRedeliveryDelayValue(conf.getNegativeAckRedeliveryDelayValue());
+      cmdBuilder.setNegativeAckRedeliveryDelayUnit(Encoder.javaTimeUnitToProtobuf(conf.getNegativeAckRedeliveryDelayUnit()));
+    }
+
+    if(conf.getDeadLetterQueuePolicy() != null ) {
+      DeadLetterPolicy p = conf.getDeadLetterQueuePolicy();
+      Tq.DeadLetterQueuePolicy.Builder builder = Tq.DeadLetterQueuePolicy.newBuilder();
+
+      builder.setMaxRedeliveryCount(p.getMaxRedeliverCount());
+
+      if(p.getRetryLetterTopic() != null) {
+        builder.setRetryTopic(p.getRetryLetterTopic());
+      }
+
+      if(p.getDeadLetterTopic() != null) {
+        builder.setDeadLetterTopic(p.getDeadLetterTopic());
+      }
+
+      cmdBuilder.setDeadLetterQueuePolicy(builder.build());
     }
 
     CommandSubscribe cmd = cmdBuilder.build();

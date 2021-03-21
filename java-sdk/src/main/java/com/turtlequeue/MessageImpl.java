@@ -44,8 +44,9 @@ public class MessageImpl<T> implements Message<T> {
   String replicatedFrom = null;
   Long delay = null;
   TimeUnit delayTimeUnit = null;
+  Integer redeliveryCount = null;
 
-  public MessageImpl (ClientImpl c, ConsumerImpl<T> consumer, MessageIdImpl messageId, T payload, String producerName, Long eventTime, Long publishTime, Topic topic, String key, Map<String, String> properties, ProducerImpl<T> producer, Boolean isReplicated, String replicatedFrom, Long delay, TimeUnit delayTimeUnit) {
+  public MessageImpl (ClientImpl c, ConsumerImpl<T> consumer, MessageIdImpl messageId, T payload, String producerName, Long eventTime, Long publishTime, Topic topic, String key, Map<String, String> properties, ProducerImpl<T> producer, Boolean isReplicated, String replicatedFrom, Long delay, TimeUnit delayTimeUnit, Integer redeliveryCount) {
     this.c = c;
     this.consumer = consumer;
     this.messageId = messageId;
@@ -61,6 +62,7 @@ public class MessageImpl<T> implements Message<T> {
     this.replicatedFrom = replicatedFrom;
     this.delay = delay;
     this.delayTimeUnit = delayTimeUnit;
+    this.redeliveryCount = redeliveryCount;
   }
 
   public MessageId getMessageId() {
@@ -101,6 +103,10 @@ public class MessageImpl<T> implements Message<T> {
 
   public String getReplicatedFrom() {
     return this.replicatedFrom;
+  }
+
+  public Integer getRedeliveryCount() {
+    return this.redeliveryCount;
   }
 
   public Topic getTopic() {

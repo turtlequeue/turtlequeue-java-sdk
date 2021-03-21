@@ -145,8 +145,6 @@ public class ReaderTest
       Thread.sleep(1000);
       assertEquals(false, reader.hasReachedEndOfTopic());
 
-      System.out.println("DID END UP AT THE SEEKING POINT ================ ");
-
       // re-read from messageID 3
       // (ie. seek to messageId 2, the next message will be 3)
       reader.seek(msgId2).get(1, TimeUnit.SECONDS);

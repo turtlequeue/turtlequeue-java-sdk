@@ -36,6 +36,7 @@ public interface Message <T> {
   public MessageId getMessageId();
   public CompletableFuture<Void> acknowledge();
   public Long getPublishTime();
+  public Integer getRedeliveryCount();
 
   // producer
   public Producer<T> getProducer();

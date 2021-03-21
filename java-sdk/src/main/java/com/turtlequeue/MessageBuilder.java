@@ -107,7 +107,8 @@ public class MessageBuilder<T> {
                               this.disableReplication,
                               null,
                               this.delay,
-                              this.delayUnit);
+                              this.delayUnit,
+                              null);
   }
 
   public CompletableFuture<MessageId> send() {

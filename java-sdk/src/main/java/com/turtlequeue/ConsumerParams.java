@@ -29,12 +29,10 @@ import com.turtlequeue.MessageId;
 import com.turtlequeue.Topic;
 import com.turtlequeue.EndOfTopicMessageListener;
 import com.turtlequeue.SubscriptionMode;
+import com.turtlequeue.DeadLetterPolicy;
 
 public class ConsumerParams {
-  // NOT present with the "easy" api
-  // Long producerId = null; // MUST unique per SDK
-  //
-  // TODO final
+
   Long consumerId = null;
   Topic topic = null;
   String subName = null;
@@ -49,8 +47,12 @@ public class ConsumerParams {
   EndOfTopicMessageListener endOfTopicMessageListener = null;
   SubscriptionMode subscriptionMode = null;
   String jsonPath = null;
+  Boolean enableRetry;
+  Long negativeAckRedeliveryDelayValue = null;
+  TimeUnit negativeAckRedeliveryDelayUnit = null;
+  DeadLetterPolicy deadLetterQueuePolicy = null;
 
-  public ConsumerParams(Long consumerId, Topic topic, String subName, String consumerName, SubType subType, Integer priority, MessageId messageId, Map<String, String> metadata, Integer receiverQueueSize, Long ackTimeout, TimeUnit ackTimeoutTimeUnit, EndOfTopicMessageListener endOfTopicMessageListener, SubscriptionMode subscriptionMode, String jsonPath) {
+  public ConsumerParams(Long consumerId, Topic topic, String subName, String consumerName, SubType subType, Integer priority, MessageId messageId, Map<String, String> metadata, Integer receiverQueueSize, Long ackTimeout, TimeUnit ackTimeoutTimeUnit, EndOfTopicMessageListener endOfTopicMessageListener, SubscriptionMode subscriptionMode, String jsonPath, Long negativeAckRedeliveryDelayValue, TimeUnit negativeAckRedeliveryDelayUnit, Boolean enableRetry, DeadLetterPolicy deadLetterQueuePolicy) {
     this.consumerId = consumerId;
     this.topic = topic;
     this.subName = subName;
@@ -65,6 +67,10 @@ public class ConsumerParams {
     this.endOfTopicMessageListener = endOfTopicMessageListener;
     this.subscriptionMode = subscriptionMode;
     this.jsonPath = jsonPath;
+    this.negativeAckRedeliveryDelayValue = negativeAckRedeliveryDelayValue;
+    this.negativeAckRedeliveryDelayUnit = negativeAckRedeliveryDelayUnit;
+    this.enableRetry = enableRetry;
+    this.deadLetterQueuePolicy = deadLetterQueuePolicy;
   }
 
   // getters below
@@ -135,6 +141,22 @@ public class ConsumerParams {
 
   public String getJsonPath() {
     return this.jsonPath;
+  }
+
+  public Long getNegativeAckRedeliveryDelayValue() {
+    return this.negativeAckRedeliveryDelayValue;
+  }
+
+  public TimeUnit getNegativeAckRedeliveryDelayUnit() {
+    return this.negativeAckRedeliveryDelayUnit;
+  }
+
+  public Boolean getEnableRetry() {
+    return this.enableRetry;
+  }
+
+  public DeadLetterPolicy getDeadLetterQueuePolicy() {
+    return this.deadLetterQueuePolicy;
   }
 
   public String toString() {

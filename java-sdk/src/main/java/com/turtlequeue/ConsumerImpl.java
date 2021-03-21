@@ -223,7 +223,6 @@ public class ConsumerImpl<T> implements Consumer<T> {
     final CompletableFuture<Boolean> booleanFuture = new CompletableFuture<>();
 
     // https://github.com/apache/pulsar/blob/9d44c44f01a4b753aafe73ffe67448e4c281a9f6/pulsar-client/src/main/java/org/apache/pulsar/client/impl/ConsumerImpl.java#L1979
-    logger.log(Level.WARNING, "[consumer] has message available? lastMessageInBroker {1} lastMessageDequeued {2}", new Object[]{this, this.lastMessageIdInBroker, this.lastDequeuedMessageId});
 
     if(lastDequeuedMessageId == MessageId.earliest) {
 
@@ -241,7 +240,7 @@ public class ConsumerImpl<T> implements Consumer<T> {
             return null;
           })
         .exceptionally(t -> {
-            logger.log(Level.WARNING, "[consumer] could not get last message available consumer={0} {1}", new Object[]{this, t});
+            logger.log(Level.WARNING, "[{0}] could not get last message available {1}", new Object[]{this, t});
             return null;
           });
 
@@ -489,9 +488,6 @@ public class ConsumerImpl<T> implements Consumer<T> {
     InputStream in = new ByteArrayInputStream(msg.getPayload().toByteArray());
     // https://github.com/cognitect/transit-clj/blob/700f205781df180c3b4b251341e7f1831f9f71cb/src/cognitect/transit.clj#L314-L316
 
-    // I am making a Java library that needs to be extended
-    // by having custom transit read/write
-    // it almost works except for the map and list builders
     Reader reader = null;
     if(this.c.getTransitReader() != null) {
       // user-supplied reader
@@ -500,33 +496,7 @@ public class ConsumerImpl<T> implements Consumer<T> {
       reader = TransitFactory.reader(TransitFactory.Format.JSON, in, this.c.getCustomReadHandlers(), this.c.getCustomReadDefaultHandler());
     }
 
-
-    //
-    // adding a call to .setBuilders and it fails to compile
-    // https://github.com/cognitect/transit-clj/blob/700f205781df180c3b4b251341e7f1831f9f71cb/src/cognitect/transit.clj#L310-L316
-    // https://github.com/cognitect/transit-java/blob/8fdb4d68c4ee0a9b21b38ef6009f28633d87e734/src/main/java/com/cognitect/transit/impl/ReaderFactory.java#L118-L125
-
-    //ReaderSPI readerS = reader.setBuilders(this.c.getMapBuilder(), this.c.getListBuilder());
-
-    // try {
-
-    //   Method method = reader.getClass().getMethod("setBuilders");
-    //   method.invoke(reader, this.c.getMapBuilder(), this.c.getListBuilder());
-
-    // } catch (Exception ex) {
-    //   logger.log(Level.WARNING, "cannot set custom builders ", ex);
-    // }
-
-    //ReaderSPI readerSpi = reader.setBuilders(this.c.getMapBuilder(), this.c.getListBuilder());
-
     T data = reader.read();
-
-    // compilation FAIL with
-    // cannot find symbol
-    //   [ERROR]   symbol:   method setBuilders(com.cognitect.transit.MapReader<capture#1 of ?,java.util.Map<java.lang.Object,java.lang.Object>,java.lang.Object,java.lang.Object>,com.cognitect.transit.ArrayReader<capture#2 of ?,java.util.List<java.lang.Object>,java.lang.Object>)
-    //   [ERROR]   location: variable reader of type com.cognitect.transit.Reader
-
-    //logger.log(Level.FINE, "processing message: {0} \n {1} ", new Object[]{msg, data});
 
     Message<T> result = new MessageImpl<T>(this.c,
                                            this,
@@ -542,7 +512,8 @@ public class ConsumerImpl<T> implements Consumer<T> {
                                            msg.getIsReplicated(),
                                            msg.getReplicatedFrom(),
                                            null,
-                                           null);
+                                           null,
+                                           msg.getRedeliveryCount());
 
     this.onMessageProcessed(result);
 
