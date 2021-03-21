@@ -23,7 +23,8 @@
 
   <groupId>com.turtlequeue</groupId>
   <artifactId>java-sdk</artifactId>
-  <version>1.0.2-SNAPSHOT</version>
+  <version>1.0.2
+</version>
 
   <name>Turtlequeue Java SDK</name>
   <description>Turtlequeue is a hosted pub-sub messaging platform.</description>

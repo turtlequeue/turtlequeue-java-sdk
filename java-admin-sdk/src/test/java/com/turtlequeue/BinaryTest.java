@@ -15,15 +15,13 @@
  */
 package com.turtlequeue;
 
-import java.util.Date;
-import java.util.Map;
-import java.util.HashMap;
-
+import java.util.Properties;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -43,34 +41,37 @@ import com.turtlequeue.AcknowledgeBuilder.AckType;
 
 import com.turtlequeue.AdminImpl; // requiring it is necessary
 
-public class MiniBenchTest
+public class BinaryTest
+// test that the redelivery count is incremented
 {
-   // mvn -Dtest=MiniBenchTest#send100K -DfailIfNoTests=false test
-  @Test(timeout = 60000)
-  public void send5K()
+
+  @Test(timeout = 10000)
+  public void redeliveryCountIsIncremented()
   {
-
-    //this checks ordering implicitly
-
+    //
+    // this checks ordering implicitly
+    //
     TestConfLoader conf = new TestConfLoader();
     conf.loadConf("conf.properties");
 
-    // change me
-    int numOfMessages = 5000;
+    int r = ThreadLocalRandom.current().nextInt(1, 1001);
 
-    try(Client c = Client.builder()
+
+    try(
+        Client c = Client.builder()
         .setHost(conf.getHost())
         .setPort(conf.getServerPort())
         .setSecure(conf.getSecure())
         .setUserToken(conf.getUserToken())
         .setApiKey(conf.getApiKey())
+        .dataFormat("application/octet-stream")
         .build();) {
 
       c.connect().get(1, TimeUnit.SECONDS);
       System.out.println("Client connected " + c);
 
       Topic t = c.newTopicBuilder()
-        .topic("testJavaSDKMiniBench")
+        .topic("testJavaSDKbinaryFormat" + r)
         .namespace("default")
         .persistent(true)
         .build();
@@ -82,66 +83,30 @@ public class MiniBenchTest
         // exists from previous test
       }
 
-      Consumer consumer = c.newConsumer()
+      Consumer<byte[]> consumer = c.newConsumer()
         .topic(t)
-        .subscriptionName("testSubMiniBench")
-        .initialPosition(MessageId.earliest)
+        .subscriptionName("my-sub")
         .subscribe()
         .get(1, TimeUnit.SECONDS);
 
-      Producer producer = c.newProducer()
-        .blockIfQueueFull(true)
+      Producer<byte[]> producer = c.newProducer()
         .topic(t)
         .create()
         .get(1, TimeUnit.SECONDS);
 
-      //System.out.println("STARTING SEND/RECEIVE THREADS " numOfMessages +  + new Date());
+      String value = "hello BINARY";
 
-      Runnable sendLoop =
-        () -> {
-        for(int i=0; i < numOfMessages ; i++) {
-          producer.newMessage().value(i).send().exceptionally(ex -> {
-              System.out.println("FAILED TO SEND " + ex);
-              return null;
-            });
-        }};
+      producer.newMessage().value(value.getBytes()).send();
 
-      Runnable receiveLoop =
-        () -> {
-        for(int i=0 ; i < numOfMessages ; i++) {
-          //final int icpy = i;
-          try {
-            consumer.receive()
-              .thenApply(arg -> {
-                  Message msg = (Message) arg;
-                  //assertEquals((long)icpy, (long) msg.getData());
-                  return msg;
-                }).exceptionally(ex -> {
-                    System.out.println("FAILED TO RECEIVE " + ex);
-                    return null;
-                  })
-              .get();
-          } catch (Exception ex) {
-            System.out.println("ERROR RECEIVING " +  ex);
-            ex.printStackTrace(System.out);
-          }
-        }};
-
-      Thread sendThread = new Thread(sendLoop);
-      Thread receiveThread = new Thread(receiveLoop);
-      sendThread.start();
-      receiveThread.start();
-      sendThread.join();
-      receiveThread.join();
-
-      //System.out.println("DONE RECEIVED ALL MESSAGES " + new Date());
+      Message msg = consumer.receive(1L, TimeUnit.SECONDS);
+      byte[] data = (byte[]) msg.getData();
+      String dataString = new String(data);
+      assertEquals(value, dataString);
 
     } catch (Exception e) {
       System.out.println("FAIL!" + e);
       e.printStackTrace(System.out);
       fail("Should not have thrown any exception");
-
-    }
-  }
+    }}
 
 }

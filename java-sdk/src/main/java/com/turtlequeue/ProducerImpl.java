@@ -96,6 +96,7 @@ public class ProducerImpl<T> implements Producer {
     if(this.c.getTransitWriter() != null) {
       writer = this.c.getTransitWriter().apply(out);
     } else {
+      // null - may have been unset
       writer = TransitFactory.writer(TransitFactory.Format.JSON, out, this.c.getCustomWriteHandlers(), this.c.getCustomDefaultWriteHandler());
     }
 

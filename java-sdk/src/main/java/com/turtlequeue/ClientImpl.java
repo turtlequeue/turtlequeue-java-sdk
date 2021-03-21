@@ -68,7 +68,6 @@ import io.grpc.ManagedChannel ;
 import com.turtlequeue.sdk.api.proto.Tq;
 import com.turtlequeue.sdk.api.proto.TurtleQueueGrpc;
 import com.turtlequeue.sdk.api.proto.Tq.CommandConnect;
-import com.turtlequeue.sdk.api.proto.Tq.CommandPublish;
 import com.turtlequeue.sdk.api.proto.Tq.CommandSubscribe;
 import com.turtlequeue.sdk.api.proto.Tq.ResponsePublish;
 import com.turtlequeue.sdk.api.proto.Tq.ClientToBroker;
@@ -180,6 +179,7 @@ public class ClientImpl implements Client {
   ArrayReader<?, List<Object>, Object> listBuilder = null;
   Function<InputStream, Reader> transitReader = null;
   Function<OutputStream, Writer> transitWriter = null;
+  String dataFormat = null;
 
   private volatile Instant lastMessageSentAt = null;
 
@@ -191,7 +191,8 @@ public class ClientImpl implements Client {
                     DefaultReadHandler<?> customReadDefaultHandler,
                     WriteHandler<?, ?> customDefaultWriteHandler,
                     MapReader<?, Map<Object, Object>, Object, Object> mapBuilder,
-                    ArrayReader<?, List<Object>, Object> listBuilder) {
+                    ArrayReader<?, List<Object>, Object> listBuilder,
+                    String dataFormat) {
     this.host = host;
     this.port = port;
     this.secure = secure;
@@ -206,6 +207,7 @@ public class ClientImpl implements Client {
     this.listBuilder = listBuilder;
     this.transitReader = transitReader;
     this.transitWriter = transitWriter;
+    this.dataFormat = dataFormat;
 
     this.pendingRequests = new ConcurrentHashMap<Long, CompletableFuture>();
 
@@ -246,7 +248,9 @@ public class ClientImpl implements Client {
 
   protected String getDataFormat() {
     // like an http content-type header
-    return "application/transit+json";
+    // TODO let the consumer message properties override this on a per-message basis
+    // return "application/transit+json";
+    return this.dataFormat;
   }
 
   protected Map<String, ReadHandler<?, ?>> getCustomReadHandlers() {
@@ -878,7 +882,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
         f.complete(data);
         this.pendingRequests.remove(requestId);
       } else {
-        logger.log(Level.WARNING , "Could not deliver response, missing requestId " + requestId);
+        logger.log(Level.WARNING , "Could not deliver response, missing requestId[{0}], data[{1}]", new Object[]{requestId, data});
       }
 
     } catch (Exception ex) {

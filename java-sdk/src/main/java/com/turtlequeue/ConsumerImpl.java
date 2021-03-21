@@ -493,6 +493,7 @@ public class ConsumerImpl<T> implements Consumer<T> {
       // user-supplied reader
       reader = this.c.getTransitReader().apply(in);
     } else {
+      // TODO suport no reader data = msg.getPayload().toByteArray()
       reader = TransitFactory.reader(TransitFactory.Format.JSON, in, this.c.getCustomReadHandlers(), this.c.getCustomReadDefaultHandler());
     }
 
@@ -567,8 +568,13 @@ public class ConsumerImpl<T> implements Consumer<T> {
 
   }
 
-  public CommandMessage receive(long timeout, TimeUnit unit) throws Exception {
-    return incomingMessages.poll(timeout, unit);
+  public Message<T> receive(long timeout, TimeUnit unit) throws Exception {
+    CommandMessage msg =  incomingMessages.poll(timeout, unit);
+    if(msg != null) {
+      return messageProcessed(msg);
+    } else {
+      return null;
+    }
   }
 
 

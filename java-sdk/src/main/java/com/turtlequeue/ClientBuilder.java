@@ -56,6 +56,7 @@ public class ClientBuilder {
   ArrayReader<?, List<Object>, Object> listBuilder = null;
   Function<InputStream, Reader> transitReader = null;
   Function<OutputStream, Writer> transitWriter = null;
+  String dataFormat = "application/transit+json";
 
   public ClientBuilder setHost(String host) {
     this.host = host;
@@ -124,6 +125,28 @@ public class ClientBuilder {
     return this;
   }
 
+  public ClientBuilder removeDefaultWriter() {
+    this.transitWriter = null;
+    return this;
+  }
+
+  public ClientBuilder removeDefaultReader() {
+    this.transitReader = null;
+    return this;
+  }
+
+  /**
+   * Pass a String representing  an http content-type header
+   * Ex. binary -> application/octet-stream
+   *
+   * defaults to application/transit+json
+   */
+  public ClientBuilder dataFormat(String dataFormat) {
+    // like the
+    this.dataFormat = dataFormat;
+    return this;
+  }
+
   public Client build() {
     return new ClientImpl(this.host, this.port, this.secure, this.userToken, this.apiKey,
                           this.transitReader,
@@ -133,6 +156,7 @@ public class ClientBuilder {
                           this.customReadDefaultHandler,
                           this.customDefaultWriteHandler,
                           this.mapBuilder,
-                          this.listBuilder);
+                          this.listBuilder,
+                          this.dataFormat);
   }
 }

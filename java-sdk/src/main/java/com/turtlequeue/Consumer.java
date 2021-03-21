@@ -24,6 +24,8 @@ import com.turtlequeue.MessageId;
 
 public interface Consumer<T> extends Closeable {
   public CompletableFuture<Message<T>> receive();
+  public Message<T> receive(long timeout, TimeUnit unit) throws Exception;
+
   // public CompletableFuture<Void> acknowledge(MessageId messageId);
   public CompletableFuture<Void> acknowledge(Message<T> message);
   public CompletableFuture<Void> nonAcknowledge(MessageId messageId);
