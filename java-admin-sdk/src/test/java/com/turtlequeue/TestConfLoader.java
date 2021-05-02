@@ -87,10 +87,14 @@ public class TestConfLoader {
     }
 
     try {
-      this.secure = Boolean.parseBoolean(System.getenv("TURTLEQUEUE_SECURE_CONN"));
+      String secureFromEnv = System.getenv("TURTLEQUEUE_SECURE_CONN");
+      if(secureFromEnv != null) {
+        this.secure = Boolean.parseBoolean(secureFromEnv);
+      }
     } catch (Exception ex) {
       // ignored, fall back to file defaults
     }
+
     if (this.secure == null) {
       this.secure = Boolean.parseBoolean(pc.getProperty("conn.secure", "true"));
     }

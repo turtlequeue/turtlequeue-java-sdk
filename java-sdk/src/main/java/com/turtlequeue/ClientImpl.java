@@ -113,7 +113,7 @@ public class ClientImpl implements Client {
   // builder, user params
   String host = "";
   Integer port = -1;
-  Boolean secure = true;
+  Boolean secure = null;
   String userToken = null;
   String apiKey = null;
 
