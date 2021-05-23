@@ -48,9 +48,6 @@ public class DeadLetterQueueTest
   @Test(timeout = 10000)
   public void redeliveryCountIsIncremented()
   {
-    //
-    // this checks ordering implicitly
-    //
     TestConfLoader conf = new TestConfLoader();
     conf.loadConf("conf.properties");
 
@@ -121,7 +118,7 @@ public class DeadLetterQueueTest
                 assertEquals(3, redeliveryCount);
               }
               return msg;
-            }).get(5, TimeUnit.SECONDS);
+            }).get(2, TimeUnit.SECONDS);
       }
 
       assertEquals(calledWithCount, Arrays.asList(0, 1, 2));

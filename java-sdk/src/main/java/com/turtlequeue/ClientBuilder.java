@@ -57,6 +57,7 @@ public class ClientBuilder {
   Function<InputStream, Reader> transitReader = null;
   Function<OutputStream, Writer> transitWriter = null;
   String dataFormat = "application/transit+json";
+  String prefix = null;
 
   public ClientBuilder setHost(String host) {
     this.host = host;
@@ -73,12 +74,16 @@ public class ClientBuilder {
     return this;
   }
 
+  public ClientBuilder setPrefix(String prefix) {
+    // useful to debug several clients
+    this.prefix = prefix;
+    return this;
+  }
 
   public ClientBuilder setUserToken(String userToken) {
     this.userToken = userToken;
     return this;
   }
-
 
   public ClientBuilder setApiKey(String apiKey) {
     this.apiKey = apiKey;
@@ -157,6 +162,7 @@ public class ClientBuilder {
                           this.customDefaultWriteHandler,
                           this.mapBuilder,
                           this.listBuilder,
-                          this.dataFormat);
+                          this.dataFormat,
+                          this.prefix);
   }
 }

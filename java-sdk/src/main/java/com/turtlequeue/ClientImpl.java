@@ -180,6 +180,7 @@ public class ClientImpl implements Client {
   Function<InputStream, Reader> transitReader = null;
   Function<OutputStream, Writer> transitWriter = null;
   String dataFormat = null;
+  String prefix = null;
 
   private volatile Instant lastMessageSentAt = null;
 
@@ -192,7 +193,8 @@ public class ClientImpl implements Client {
                     WriteHandler<?, ?> customDefaultWriteHandler,
                     MapReader<?, Map<Object, Object>, Object, Object> mapBuilder,
                     ArrayReader<?, List<Object>, Object> listBuilder,
-                    String dataFormat) {
+                    String dataFormat,
+                    String prefix) {
     this.host = host;
     this.port = port;
     this.secure = secure;
@@ -208,6 +210,11 @@ public class ClientImpl implements Client {
     this.transitReader = transitReader;
     this.transitWriter = transitWriter;
     this.dataFormat = dataFormat;
+    if(prefix != null) {
+      this.prefix = prefix;
+    } else {
+      this.prefix = "";
+    }
 
     this.pendingRequests = new ConcurrentHashMap<Long, CompletableFuture>();
 
@@ -323,7 +330,12 @@ public class ClientImpl implements Client {
     @Override
     public void run()  {
       try {
-        client.pingPong();
+        // check when the last message out was older than  15 seconds - otherwise no need
+        if(lastMessageSentAt != null && Duration.between(lastMessageSentAt, Instant.now()).compareTo(Duration.ofSeconds(15)) > 0) {
+          client.pingPong();
+        } else {
+          logger.log(Level.INFO , "Recent ping pong already, skip this one " + lastMessageSentAt);
+        }
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       } catch (ExecutionException ex) {
@@ -391,31 +403,37 @@ public class ClientImpl implements Client {
     // TODO healthcheck
     // https://github.com/grpc/grpc/blob/master/doc/health-checking.md
     // instead would allow using the health component
-    //
-    ConnectivityState st = this.tqClient.getState();
-    if(st == ConnectivityState.READY) {
+    // consider the getState is not super reliable and the inital conn is lazy
+    // don't check the state. could check TqClient's state instead
+    // ConnectivityState st = this.tqClient.getState();
+    //if(st == ConnectivityState.READY) {
+    if(this.clientToBroker != null) {
       long requestId = this.getNextRequestId();
       this.clientToBrokerOnNext(ClientToBroker.newBuilder()
                                 .setRequestId(requestId)
                                 .setCommandPing(CommandPing.newBuilder().build())
                                 .build());
 
+      this.<ReplyPong>waitForResponse(requestId)
+        .acceptEither(timeoutAfter(15, TimeUnit.SECONDS),
+                      (replyPong) -> {
+                        this.pendingRequests.remove(requestId);
+                      })
+        .exceptionally((ex) -> {
+            logger.log(Level.WARNING, "Ping timeout requestId={0}, State={1}, Exception:\n{2}", new Object[]{requestId, this.tqClient.getState(), ex});
+            this.pendingRequests.remove(requestId);
+            return null;
+          });
       // check when the last message out was older than  15 seconds - otherwise no need
-      if(lastMessageSentAt != null && Duration.between(lastMessageSentAt, Instant.now()).compareTo(Duration.ofSeconds(15)) > 0) {
-        this.<ReplyPong>waitForResponse(requestId)
-          .acceptEither(timeoutAfter(15, TimeUnit.SECONDS),
-                        (replyPong) -> {
-                          this.pendingRequests.remove(requestId);
-                        })
-          .exceptionally((ex) -> {
-              logger.log(Level.WARNING, "Ping timeout requestId={0}, State={1}, Exception:\n{2}", new Object[]{requestId, st, ex});
-              this.pendingRequests.remove(requestId);
-              return null;
-            });
-      }
+      // if(lastMessageSentAt != null && Duration.between(lastMessageSentAt, Instant.now()).compareTo(Duration.ofSeconds(15)) > 0) {
+      //
+      // }
     } else {
-      logger.log(Level.WARNING, "Cannot ping, the connections is State={0}", new Object[]{st});
+      logger.log(Level.SEVERE, "Cannot ping, no clientToBroker, Client={0}", new Object[]{this});
     }
+    // } else {
+    //   logger.log(Level.WARNING, "Cannot ping, the connections is State={0}", new Object[]{st});
+    // }
   }
 
   protected void stopPingLoop() {
@@ -590,6 +608,13 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
 
   public CompletableFuture<Client> connect () throws Exception {
 
+    if(this.userToken == null) {
+      logger.log(Level.SEVERE, prefix + "Missing user token");
+    }
+    if(this.apiKey == null) {
+      logger.log(Level.SEVERE, prefix + "Missing api key");
+    }
+
     TurtleQueueStub stub = this.tqClient.checkAndGetStub(true);
 
     final ClientImpl clientRef = this;
@@ -706,10 +731,10 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
 
             case REPLY_ERROR:
               {
-                logger.log(Level.SEVERE, "Error from the broker " + requestId);
+                // logger.log(Level.SEVERE, prefix + "Error from the broker " + requestId);
 
                 TqClientException ex = TqClientException.makeTqExceptionFromReplyError(c.getReplyError());
-                logger.log(Level.SEVERE, "Error from the broker as exception " + ex);
+                logger.log(Level.SEVERE, prefix + "Error from the broker as exception " + ex);
 
                 if(requestId != 0 ) {
                   clientRef.pendingRequests.get(requestId).completeExceptionally(ex);
@@ -741,8 +766,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
               logger.log(Level.WARNING, "Unimplemented message received {0}", c);
             }
           } catch (Exception ex) {
-            logger.log(Level.SEVERE, "Unhandled SDK exception message={0}", c);
-            logger.log(Level.SEVERE, "Unhandled SDK exception error={0}", ex);
+            logger.log(Level.SEVERE, prefix + "Unhandled SDK exception message={0}, error={1}", new Object[]{c, ex});
           }
         }
 
@@ -756,7 +780,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
 
           // broker is sending an error back.. get the metadata requestId
           // TODO check requestId here and handle below correctly, may not be for this request..
-          logger.log(Level.FINE , "onError called {0} ", t);
+          //logger.log(Level.WARNING , "onError called {0} ", t);
           Status st = Status.fromThrowable(t);
 
           // System.out.println("CHECK: CONNECTION STATUS " + clientRef.tqClient.getState());
@@ -775,7 +799,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
           } else {
             // if onError State=READY BrokerReplyStatus=Status{code=CANCELLED, description=Client is closing, cause=null}
             // then this is fine
-            logger.log(Level.FINE , "onError State={0} BrokerReplyStatus={1}", new Object[]{clientRef.tqClient.getState(), st});
+            logger.log(Level.INFO , "onError State={0} BrokerReplyStatus={1}", new Object[]{clientRef.tqClient.getState(), st});
 
             if((clientRef.tqClient.getState() == ConnectivityState.IDLE)
                && ((st.getCode() == Status.Code.UNAVAILABLE)
@@ -816,22 +840,17 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
 
         @Override
         public void onCompleted() {
+          logger.log(Level.SEVERE, "ON COMPLETED");
+
           System.out.println("Broker has closed bidi link TODO reconnect depending on state ?");
         }
       };
 
     try {
       this.clientToBroker = stub.bidilink(this.brokerToClient);
-
-      if(this.userToken == null) {
-        logger.log(Level.SEVERE, "Missing user token");
-      }
-      if(this.apiKey == null) {
-        logger.log(Level.SEVERE, "Missing api key");
-      }
-
+      // this.pingPong(); // force init?
     } catch (StatusRuntimeException e) {
-      logger.log(Level.INFO, "RPC failed: {0}", e.getStatus());
+      logger.log(Level.SEVERE, prefix + "RPC failed: {0}", e.getStatus());
       throw e;
     }
 
@@ -1172,7 +1191,7 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
     // https://stackoverflow.com/questions/43414695/closing-all-open-streams-in-grpc-java-from-client-end-cleanly
     //
     synchronized (this.clientToBroker) {
-      ((ClientCallStreamObserver) this.clientToBroker).cancel("Client is closing", null);
+      ((ClientCallStreamObserver) this.clientToBroker).cancel("close() called: client is closing", null);
     }
 
     // close the connection with the broker

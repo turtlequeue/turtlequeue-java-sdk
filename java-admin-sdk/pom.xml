@@ -23,7 +23,7 @@
 
   <groupId>com.turtlequeue</groupId>
   <artifactId>java-admin-sdk</artifactId>
-  <version>1.0.3</version>
+  <version>1.0.4</version>
 
   <name>TurtleQueue Admin Java SDK</name>
   <description>Turtlequeue is a hosted pub-sub messaging platform.</description>
@@ -70,13 +70,13 @@
     <dependency>
       <groupId>com.turtlequeue</groupId>
       <artifactId>java-sdk</artifactId>
-      <version>1.0.3</version>
+      <version>1.0.4</version>
     </dependency>
 
     <dependency>
       <groupId>com.turtlequeue</groupId>
       <artifactId>sdk.proto.admin</artifactId>
-      <version>1.0.3</version>
+      <version>1.0.4</version>
     </dependency>
 
     <dependency>

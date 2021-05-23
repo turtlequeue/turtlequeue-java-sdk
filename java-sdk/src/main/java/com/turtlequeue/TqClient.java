@@ -93,7 +93,7 @@ public class TqClient {
     retryPolicy.put("initialBackoff", "10s");
     retryPolicy.put("maxBackoff", "5s");
     retryPolicy.put("backoffMultiplier", 1D);
-    retryPolicy.put("retryableStatusCodes", Arrays.<Object>asList("UNAVAILABLE"));
+    retryPolicy.put("retryableStatusCodes", Arrays.<Object>asList("UNAVAILABLE")); // TODO review
 
     Map<String, Object> methodConfigTq = new HashMap<>();
     Map<String, Object> name = new HashMap<>();
@@ -110,10 +110,8 @@ public class TqClient {
     methodConfigTqAdm.put("waitForReady", false);
 
     Map<String, Object> serviceConfig = new HashMap<>();
-    serviceConfig.put("methodConfig",
-                      Arrays.asList(methodConfigTq, methodConfigTqAdm)
-                      //;;Collections.<Object>singletonList(methodConfigTq)
-                      );
+    serviceConfig.put("methodConfig", Arrays.asList(methodConfigTq, methodConfigTqAdm));
+
     // TODO keepAliveTime
     // keepAliveWithoutCalls
     // idleTimeout
@@ -132,6 +130,8 @@ public class TqClient {
     TqClient thisRef = this;
     this.withCancellation = Context.current().withCancellation();
 
+    // System.out.println("HOST  " + c.getHost() + " PORT " +  c.getPort() + " TOKEN " +  c.getUserToken() + " KEY   " + c.getApiKey() + " SECURE " + c.getSecure());
+
     withCancellation.run(new Runnable() {
         @Override public void run() {
           thisRef.asyncStub = TurtleQueueGrpc.newStub(ClientInterceptors.intercept(channel, new ClientInterceptor[] { new GrpcLoggingClientInterceptor()}))
@@ -149,12 +149,14 @@ public class TqClient {
     } else {
 
       ConnectivityState state = channel.getState(requestConnection) ;
+      // connecting
+      logger.log(Level.INFO, "Initializing TqClient requestConnection={0}, ConnectivityState={1} ", new Object[]{requestConnection, state});
 
-      logger.log(Level.FINE, "Initializing TqClient requestConnection={0}, ConnectivityState={1} ", new Object[]{requestConnection,state });
 
-      if (requestConnection == false && state != ConnectivityState.READY) {
-        throw new Exception("Trying to use the methods before the connection has been initialized, state = " + state);
-      }
+      // if (requestConnection == false && state != ConnectivityState.READY) {
+      //   throw new Exception("Trying to use the methods before the connection has been initialized, state = " + state);
+      // }
+
       return this.asyncStub;
     }
   }
@@ -164,7 +166,7 @@ public class TqClient {
   }
 
   protected ConnectivityState reconnectChannel() {
-    logger.log(Level.FINE , "Reconnecting channel " + c.getHost() + ":" + c.getPort());
+    logger.log(Level.SEVERE , "Reconnecting channel " + c.getHost() + ":" + c.getPort());
 
     ConnectivityState st = this.channel.getState(true);
     this.channel.resetConnectBackoff();

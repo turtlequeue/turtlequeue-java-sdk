@@ -131,10 +131,13 @@ public class ProducerImpl<T> implements Producer {
       b.putAllProperties(p);
     }
 
-    return this.c.<ResponsePublish>producerCommand(CommandProducer.newBuilder()
-                                                   .setProducerId(this.getProducerId())
-                                                   .setCommandSend(b.build())
-                                                   .build())
+
+    CommandProducer cmd = CommandProducer.newBuilder()
+      .setProducerId(this.getProducerId())
+      .setCommandSend(b.build())
+      .build();
+
+    return this.c.<ResponsePublish>producerCommand(cmd)
       .thenApply((ResponsePublish rp) -> {
           MessageId messageId = MessageId.fromMessageIdData(rp.getMessageId());
 
