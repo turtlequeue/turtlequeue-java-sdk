@@ -93,12 +93,11 @@ public class ClientOneToOneTest
         .setSecure(conf.getSecure())
         .setUserToken(conf.getUserToken())
         .setApiKey(conf.getApiKey())
-        .build();
+        .build()
+        .connect()
+        .get(1, TimeUnit.SECONDS);
         ) {
 
-
-      System.out.println("Connecting");
-      c.connect().get();
       System.out.println("Client connected ");
 
       Topic t = c.newTopicBuilder()

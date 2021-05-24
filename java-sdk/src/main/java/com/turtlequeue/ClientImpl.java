@@ -787,15 +787,19 @@ public CompletableFuture<Void> registerProducerBroker(ProducerImpl producer) {
 
           // Status st = Status.fromThrowable(t);
           // st.getCode();
-
           if (!connectResponse.isDone()) { // race condition?
             logger.log(Level.SEVERE , "Cannot connect, please check credentials and connectivity {0} " + connectResponse, t);
-            connectResponse.completeExceptionally(t);
-          } else if (clientRef.getConnState() == ConnectivityState.SHUTDOWN) {
+          }
+
+          connectResponse.completeExceptionally(t); // succeeds only if not already .isDone
+          // or
+          // https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html#obtrudeException-java.lang.Throwable-
+
+          if (clientRef.getConnState() == ConnectivityState.SHUTDOWN) {
             // https://github.com/grpc/grpc-java/issues/3297#issuecomment-346427628
             // however this could be caused by another error so still log it
             //
-            logger.log(Level.FINE , "onError while shutdown - ignoring " + st);
+            logger.log(Level.FINE , "onError while shutdown if fine " + st);
           } else {
             // if onError State=READY BrokerReplyStatus=Status{code=CANCELLED, description=Client is closing, cause=null}
             // then this is fine

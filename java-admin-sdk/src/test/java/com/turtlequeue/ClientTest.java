@@ -77,10 +77,10 @@ public class ClientTest
         .setSecure(conf.getSecure())
         .setUserToken(conf.getUserToken())
         .setApiKey(conf.getApiKey())
-        .build();
+        .build()
+        .connect()
+        .get(1, TimeUnit.SECONDS);
         ) {
-
-      c.connect().get(1, TimeUnit.SECONDS);
 
       int r = ThreadLocalRandom.current().nextInt(1, 1001);
 
