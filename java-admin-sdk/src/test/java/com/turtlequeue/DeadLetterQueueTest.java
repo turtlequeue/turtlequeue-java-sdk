@@ -64,7 +64,7 @@ public class DeadLetterQueueTest
         .setApiKey(conf.getApiKey())
         .build()
         .connect()
-        .get(1, TimeUnit.SECONDS);
+        .get();
         ) {
       System.out.println("Client connected " + c);
 
@@ -118,7 +118,8 @@ public class DeadLetterQueueTest
                 assertEquals(3, redeliveryCount);
               }
               return msg;
-            }).get(2, TimeUnit.SECONDS);
+            })
+          .get(5, TimeUnit.SECONDS);
       }
 
       assertEquals(calledWithCount, Arrays.asList(0, 1, 2));
