@@ -24,6 +24,6 @@ This is analogous to the pulsar admin package. This allows you to create and del
 
 # Before merging
 
-use static analysis tools. Lombok, findbugs
-mvn com.github.spotbugs:spotbugs-maven-plugin:4.1.3:spotbugs && mvn com.github.spotbugs:spotbugs-maven-plugin:4.1.3:gui
-use the licence plugin if there are new files: mvn com.mycila:license-maven-plugin:4.0.rc2:format
+- use static analysis tools. Lombok, findbugs
+- mvn com.github.spotbugs:spotbugs-maven-plugin:4.1.3:spotbugs && mvn com.github.spotbugs:spotbugs-maven-plugin:4.1.3:gui
+- use the licence plugin if there are new files: mvn com.mycila:license-maven-plugin:4.0.rc2:format

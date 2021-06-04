@@ -79,7 +79,7 @@ public class ClientTest
         .setApiKey(conf.getApiKey())
         .build()
         .connect()
-        .get(1, TimeUnit.SECONDS);
+        .get();
         ) {
 
       int r = ThreadLocalRandom.current().nextInt(1, 1001);
@@ -178,6 +178,4 @@ public class ClientTest
       fail("Should not have thrown any exception");
     }
   }
-
-
 }

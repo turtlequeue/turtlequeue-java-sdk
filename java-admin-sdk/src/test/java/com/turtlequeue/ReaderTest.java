@@ -31,7 +31,6 @@ import java.util.stream.IntStream;
 
 import com.google.common.collect.Maps;
 
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -70,7 +69,7 @@ public class ReaderTest
         .setApiKey(conf.getApiKey())
         .build()
         .connect()
-        .get(1, TimeUnit.SECONDS)
+        .get()
         ) {
 
       System.out.println("Client connected " + c);
@@ -198,10 +197,11 @@ public class ReaderTest
         .setSecure(conf.getSecure())
         .setUserToken(conf.getUserToken())
         .setApiKey(conf.getApiKey())
-        .build();
+        .build()
+        .connect().get()
         ) {
 
-      c.connect().get(1, TimeUnit.SECONDS);
+
       System.out.println("Client connected " + c);
 
       Topic t = c.newTopicBuilder()

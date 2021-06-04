@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 
 import com.google.common.collect.Maps;
 
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -41,8 +40,7 @@ import com.turtlequeue.ClientBuilder;
 import com.turtlequeue.MessageId;
 import com.turtlequeue.SubType;
 import com.turtlequeue.SubInitialPosition;
-import com.turtlequeue.AcknowledgeBuilder.AckType; // TODO move to own class?
-
+import com.turtlequeue.AcknowledgeBuilder.AckType;
 import com.turtlequeue.AdminImpl; // requiring it is necessary
 
 public class NackTest

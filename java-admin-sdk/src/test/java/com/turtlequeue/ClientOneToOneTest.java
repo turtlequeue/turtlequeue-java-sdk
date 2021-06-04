@@ -14,28 +14,7 @@
  * limitations under the License.
  */
 package com.turtlequeue;
-//
-// NEXT
-// - check close / cancel
-// - maven on JVM per test
-//
-// [WARNING] /Users/nha/repo/turtlequeue/sdk/java/java-sdk/src/main/java/com/turtlequeue/ClientImpl.java: Some input files use unchecked or unsafe operations.
-// [WARNING] /Users/nha/repo/turtlequeue/sdk/java/java-sdk/src/main/java/com/turtlequeue/ClientImpl.java: Recompile with -Xlint:unchecked for details.
-//
-//
-// SEVERE: FIRSTUnhandled SDK exception message=reply_connect {
-//   uuid: "a48535cd-e597-455d-8aeb-9c429bb314c0"
-// }
-// , error=java.util.concurrent.RejectedExecutionException: Task java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask@2254a3e[Not completed, task = java.util.concurrent.Executors$RunnableAdapter@15c17041[Wrapped task = com.turtlequeue.ClientImpl$PingCallable@7f906ea7]] rejected from java.util.concurrent.ScheduledThreadPoolExecutor@50d27903[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
-//
-// https://github.com/grpc/grpc-java/issues/7028
-// https://github.com/googleapis/java-speech/blob/master/samples/snippets/src/main/java/com/example/speech/InfiniteStreamRecognize.java
-//
-// https://github.com/googleapis/gax-java
-// https://github.com/googleapis/gapic-generator//
-// TODO
-// - test copy from a working test???
-//
+
 import java.util.Properties;
 import java.util.Date;
 import java.util.Map;
@@ -51,7 +30,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.google.common.collect.Maps;
-
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -70,7 +48,6 @@ import com.turtlequeue.SubInitialPosition;
 import com.turtlequeue.AcknowledgeBuilder.AckType;
 
 import com.turtlequeue.AdminImpl; // requiring it is necessary
-
 
 public class ClientOneToOneTest
 {
@@ -126,11 +103,6 @@ public class ClientOneToOneTest
         .create()
         .get(1, TimeUnit.SECONDS);
 
-      // send them all
-      // TODO send the Date instead??
-      //
-      // and TODO make a .receiver
-      // + log them
       Date [] sentTs = new Date[numOfMessages];
       final CompletableFuture [] recvFutTs = new CompletableFuture[numOfMessages];
 
@@ -152,7 +124,6 @@ public class ClientOneToOneTest
        }
 
       System.out.println("DONE SENDING -------------------- ");
-
 
       for(int i=0 ; i < numOfMessages ; i++) {
         final int icpy = i;
@@ -186,8 +157,4 @@ public class ClientOneToOneTest
       fail("Should not have thrown any exception");
 
     }}
-
-
-
-
 }

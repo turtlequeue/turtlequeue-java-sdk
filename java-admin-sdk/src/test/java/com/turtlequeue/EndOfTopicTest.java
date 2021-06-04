@@ -81,7 +81,7 @@ public class EndOfTopicTest
         .setApiKey(conf.getApiKey())
         .build()
         .connect()
-        .get(1, TimeUnit.SECONDS);
+        .get();
         ) {
       System.out.println("Client connected " + c);
 
@@ -123,23 +123,11 @@ public class EndOfTopicTest
         producer.newMessage().value(123).send().get(1, TimeUnit.SECONDS);
         fail("Publishing on a closed topic should throw");
       }
-      /* catch (TqClientException.TopicTerminatedException ex) { */
-      /*   // FIXME */
-      /*   // newMessage */
-      /*   System.out.println("SPECIFIC EXCEPTION " + ex); */
-      /*   // expected */
-      /*   // TODO throw SPECIFIC EXCEPTION */
-      /*   // TODO https://www.baeldung.com/java-sneaky-throws */
-      /*   // */
-      /* } */
       catch (Exception ex) {
         System.out.println("SPECIFIC EXCEPTION " + ex);
         System.out.println("SPECIFIC EXCEPTION CLASS" + ex.getClass().getName());
-
         /* SPECIFIC EXCEPTION java.util.concurrent.ExecutionException: com.turtlequeue.TqClientException$TopicTerminatedException: Topic was already terminated */
-        /*   SPECIFIC EXCEPTION CLASSjava.util.concurrent.ExecutionException */
-
-        // fail("Publishing on a closed topic should throw a specific Exception");
+        /* SPECIFIC EXCEPTION CLASSjava.util.concurrent.ExecutionException */
       }
 
       Message msg1 = consumer.receive().get(1, TimeUnit.SECONDS);
@@ -162,8 +150,8 @@ public class EndOfTopicTest
         // TODO which one is it? AssertNull or catch Exception?
         assertNull(msg4);
       } catch (Exception ex) {
-          // this throws TimeoutException, like pulsar..
-          // could be changed if pulsar threw too TODO raise it to pulsar?
+        // this throws TimeoutException, like pulsar..
+        // could be changed if pulsar threw too TODO raise it to pulsar?
       }
 
       didReachEndOfTopic.get(1, TimeUnit.SECONDS);

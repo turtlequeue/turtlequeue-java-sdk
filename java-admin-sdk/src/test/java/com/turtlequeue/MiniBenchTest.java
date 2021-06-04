@@ -18,11 +18,9 @@ package com.turtlequeue;
 import java.util.Date;
 import java.util.Map;
 import java.util.HashMap;
-
 import java.util.List;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.Assert.assertEquals;
@@ -40,7 +38,6 @@ import com.turtlequeue.SubType;
 import com.turtlequeue.Topic;
 import com.turtlequeue.SubInitialPosition;
 import com.turtlequeue.AcknowledgeBuilder.AckType;
-
 import com.turtlequeue.AdminImpl; // requiring it is necessary
 
 public class MiniBenchTest
